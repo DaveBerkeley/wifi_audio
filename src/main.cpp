@@ -123,17 +123,13 @@ static bool init_devices()
         }
     }
 
-    Display *display = (Display*) Objects::objects->get("display");
-
     //  Initialise the network (if any)
 
 #if defined(WIFI)
-    if (display) display->write("net");
     void start_network(); // TODO : this should be in a header file
     start_network();
 
     const bool has_net = Objects::objects->get("net");
-    if (display && has_net) display->write("con.");
 #endif
 
     // Start mDNS?
@@ -146,11 +142,9 @@ static bool init_devices()
         if (db.get("hostname", name, & size))
         {
             Network::start_mdns(strdup(name));
-            if (display) display->write("mdns");
         }
     }
     
-    if (display) display->write("init");
     board_init();
     return true;
 }

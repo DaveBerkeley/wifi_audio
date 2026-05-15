@@ -91,10 +91,16 @@ files = [
     'panglos/json_fmt.h',
     'panglos/ntp.h',
 
+    'drivers/motor.cpp',
+    'drivers/pwm.cpp',
     'panglos/drivers/gpio.h',
     'panglos/drivers/spi.h',
+    'panglos/drivers/i2c.h',
     'panglos/drivers/uart.h',
     'panglos/drivers/timer.h',
+    'panglos/drivers/motor.h',
+    'panglos/drivers/pwm.h',
+    'panglos/drivers/7-segment.h',
     'panglos/drivers/led_strip.h',
 
     'panglos/hal.h',
