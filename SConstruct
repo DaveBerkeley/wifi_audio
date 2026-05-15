@@ -2,6 +2,7 @@
 files = [
 
     'test/main.cpp',
+    'test/storage.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',
@@ -28,6 +29,7 @@ panglos = [
     'src/watchdog.cpp',
 
     'src/drivers/spi.cpp',
+    'src/drivers/7-segment.cpp',
 
     'src/app/event.cpp',
     'src/app/devices.cpp',
