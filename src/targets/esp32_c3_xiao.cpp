@@ -7,6 +7,8 @@
 
 #include "panglos/esp32/spi.h"
 #include "panglos/app/devices.h"
+#include "panglos/app/event.h"
+#include "panglos/app/cli_server.h"
 
 #include "board.h"
 
@@ -39,6 +41,8 @@ static Device _board_devs[] = {
 void board_init()
 {
     PO_DEBUG("");
+
+    EventHandler::add_handler(Event::INIT, net_cli_init, 0);    
 }
 
 Device *board_devs = _board_devs;

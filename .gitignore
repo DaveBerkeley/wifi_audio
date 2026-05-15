@@ -3,3 +3,9 @@ CMakeLists.txt
 sdkconfig.*
 
 src/banner.cpp
+
+.sconsign.dblite
+managed_components/
+dependencies.lock
+lib/*
+tags

@@ -1,39 +1,13 @@
 
 files = [
-    'src/cli_mqtt.cpp',
-    'src/json.cpp',
-#    'src/cdplayer.cpp',
-    'src/moon_clock.cpp',
-    'src/moon_dates.c',
-#    'src/gps.cpp',
-    'src/xform.cpp',
-    'src/json_dev.cpp',
-    'src/builder.cpp',
-    'src/builders.cpp',
-    'src/http.cpp',
-    'src/tick_actuator.cpp',
-    'src/mains_monitor.cpp',
-    'src/udp.cpp',
 
     'test/main.cpp',
-    'test/cli.cpp',
-    'test/mqtt.cpp',
-#    'test/cdplayer.cpp',
-    'test/moon_clock.cpp',
-    'test/xform.cpp',
-    'test/json.cpp',
-    'test/http.cpp',
-    'test/actuator.cpp',
-    'test/storage.cpp',
-    'test/mains_monitor.cpp',
-    #'test/udp.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',
 
     # https://github.com/eyalroz/printf
     'lib/printf/src/printf/printf.c',
-
 ]
 
 panglos = [
@@ -86,8 +60,7 @@ ccflags = [
     '-g',
     '-DGTEST=1',
     '-DARCH_LINUX=1',
-    '-DMOON_CLOCK=1',
-    '-DMAINS_POWER_CONTROL=1',
+    '-DAUDIO_TX=1',
 ]
 
 cpppath = [
