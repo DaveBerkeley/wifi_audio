@@ -1,8 +1,10 @@
 
 files = [
+    'src/rtsp.cpp',
 
     'test/main.cpp',
     'test/storage.cpp',
+    'test/rtsp.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',
