@@ -43,6 +43,26 @@ const LUT cmd_lut[] = {
     { 0, 0 },
 };
 
+static bool unsupported(const char *cmd)
+{
+    // return true if the command is in the list of valid but unsupported commands
+    static const char *cmds[] = {
+        "ANNOUNCE",
+        "GET_PARAMETER",
+        "PLAY_NOTIFY",
+        "RECORD",
+        "REDIRECT",
+        "SET_PARAMETER",
+        0,
+    };
+    for (const char **s = cmds; *s; s++)
+    {
+        if (!strcasecmp(*s, cmd))
+            return true;
+    }
+    return false;
+}
+
     /*
      *
      */
@@ -108,7 +128,7 @@ LUT response_lut[] = {
     {   "Precondition Failed", 412 },
     {   "Request Message Body Too Large", 413 },
     {   "Request-URI Too Long", 414 },
-    {   "Unsupported Media Type", 415 },
+    {   "Unsupported Media Type", E_Unsupported_Media_Type },
     {   "Parameter Not Understood", E_Parameter_Not_Understood },
     {   "Not Enough Bandwidth", 453 },
     {   "Session Not Found", 454 },
@@ -153,17 +173,251 @@ public:
         ASSERT(handler);
     }
 
-    bool get_number(int *result, char *line)
+    bool get_number(int *result, char *line, char **_end=0, int base=10)
     {
         if (!line) return false;
         char *end = 0;
-        long long val = strtoll(line, & end, 10);
+        long long val = strtoll(line, & end, base);
         *result = (int) val;
+        if (_end) *_end = end;
         return true;
     }
 
-    void read_headers(LineParser *lp, struct RtspHeaders *hdr)
+    bool get_ipaddr(struct RtspHeader::IpAddr *addr, char *s, char **_end=0)
     {
+        for (int i = 0; i < 4; i++)
+        {
+            int value = 0;
+            char *end = 0;
+            if (!get_number(& value, s, & end))
+                return false;
+            addr->octets[i] = (uint8_t) value;
+            if (_end) *_end = end;
+        }
+        return true;
+    }
+
+    bool parse_transport_option(struct RtspHeader::Transport *hdr, char *option)
+    {
+        PO_DEBUG("'%s'", option);
+
+        struct Binaries {
+            const char *cmd;
+            bool set;
+            bool *flag;
+        };
+
+        const struct Binaries bins[] = {
+            { "unicast", true, & hdr->unicast },
+            { "multicast", false, & hdr->unicast },
+            { "rtcp-mux", true, & hdr->rtcp_mux },
+            { 0 },
+        };
+
+        for (const struct Binaries *b = bins; b->cmd; b++)
+        {
+            if (!strcmp(b->cmd, option))
+            {
+                *b->flag = b->set;
+                return true;
+            }
+        }
+
+        struct Range {
+            const char *cmd;
+            int *values;
+        };
+
+        const struct Range ranges[] = {
+            { "client_port=", hdr->client_port },
+            { "server_port=", hdr->server_port },
+            { "interleaved=", hdr->interleaved },
+            { "port=", hdr->port },
+            { 0 },
+        };
+
+        for (const struct Range *r = ranges; r->cmd; r++)
+        {
+            if (strncmp(r->cmd, option, strlen(r->cmd)))
+                continue;
+            option = & option[strlen(r->cmd)];
+
+            char *end = 0;
+            if (!get_number(& r->values[0], option, & end))
+                return false;
+            if (end && (end[0] != '-'))
+                return false;
+            option = end + 1;
+            end = 0;
+            if (!get_number(& r->values[1], option, & end))
+                return false;
+
+            PO_DEBUG("%s %d,%d", r->cmd, r->values[0], r->values[1]);
+            return true;
+        }
+
+        struct TextOption
+        {
+            const char *cmd;
+            const char **value;
+        };
+
+        const struct TextOption texts[] = {
+            { "mode=", & hdr->mode },
+            { 0 },
+        };
+
+        for (const struct TextOption *t = texts; t->cmd; t++)
+        {
+            if (strncmp(t->cmd, option, strlen(t->cmd)))
+                continue;
+            option = & option[strlen(t->cmd)];
+            * t->value = option;
+            return true;
+        }
+
+        struct NumberOption
+        {
+            const char *cmd;
+            int *value;
+        };
+
+        const struct NumberOption numbers[] = {
+            { "ttl=", & hdr->ttl },
+            { "ssrc=", & hdr->ttl },
+            { 0 },
+        };
+
+        for (const struct NumberOption *n = numbers; n->cmd; n++)
+        {
+            if (strncmp(n->cmd, option, strlen(n->cmd)))
+                continue;
+            option = & option[strlen(n->cmd)];
+            char *end = 0;
+            if (!get_number(n->value, option, & end, 0))
+                return false;
+            return true;
+        }
+
+        struct IpAddr
+        {
+            const char *cmd;
+            RtspHeader::IpAddr *addr;
+        };
+
+        const struct IpAddr ips[] = {
+            { "destination=", & hdr->destination },
+            { "source=", & hdr->source },
+            { 0 },
+        };
+
+        for (const struct IpAddr *i = ips; i->cmd; i++)
+        {
+            if (strncmp(i->cmd, option, strlen(i->cmd)))
+                continue;
+            option = & option[strlen(i->cmd)];
+            if (!get_ipaddr(i->addr, option))
+                return false;
+            return true;
+        }
+
+        const struct IpAddr iprange[] = {
+            {   "src_addr=", & hdr->src_addr[0] },
+            {   "dest_addr=", & hdr->dest_addr[0] },
+            { 0 },
+        };
+
+        for (const struct IpAddr *i = iprange; i->cmd; i++)
+        {
+            if (strncmp(i->cmd, option, strlen(i->cmd)))
+                continue;
+            option = & option[strlen(i->cmd)];
+            char *end = 0;
+            if (!get_ipaddr(i->addr, option, & end))
+                return false;
+            if (!(end && end[0] == ','))
+                return false;
+            option = end + 1;
+            if (!get_ipaddr(i->addr, option, & end))
+                return false;
+            return true;
+        }
+
+        PO_DEBUG("not handled");
+        return false;
+    }
+
+    bool parse_transport(struct RtspHeader *hdr, char **save)
+    {
+        // "Transport:" may have more than one transport spec.
+        char *lines[RtspHeader::MAX_TRANSPORTS] = { 0 };
+
+        char *ss = *save;
+        int idx = 0;
+        size_t sz = strlen(ss) - 4;
+        for (size_t i = 0; i < sz; i++)
+        {
+            if (strncmp(& ss[i], "RTP/", 4))
+                continue;
+
+            lines[idx] = & ss[i];
+            // remove any trailing ", " from the preceeding line
+            if (idx)
+            {
+                char *prev = lines[idx-1];
+                for (size_t si = lines[idx] - prev - 1; si > 0; si--)
+                {
+                    if ((prev[si] == ' ') || (prev[si] == ','))
+                        prev[si] = '\0';
+                    else
+                        break;
+                }
+            }
+            idx += 1;
+            if (idx >= RtspHeader::MAX_TRANSPORTS)
+                break;
+        }
+
+        for (int idx = 0; idx < RtspHeader::MAX_TRANSPORTS; idx++)
+        {
+            if (!lines[idx]) break;
+            PO_DEBUG("parse transport spec.");
+
+            // set defaults
+            hdr->transport[idx].transport = "UDP";
+            hdr->transport[idx].mode = "PLAY";
+            hdr->transport[idx].unicast = false;
+
+            char *l_save = 0;
+            char *s = strtok_r(lines[idx], ";", & l_save);
+            // parse the RTP/AVP/UDP transport-protocol/profile/lower-transport part
+            char *t_save = 0;
+            char *protocol = strtok_r(s, "/", & t_save);
+            if (protocol && !strcmp("RTP", protocol))
+                hdr->transport[idx].rtp = true;
+            char *profile = strtok_r(0, "/", & t_save);
+            PO_DEBUG("profile='%s'", profile); // TODO
+            char *transport = strtok_r(0, "/", & t_save);
+            if (transport) hdr->transport[idx].transport = transport;
+
+            PO_DEBUG("'%s/%s/%s'", protocol, profile, hdr->transport[idx].transport);
+
+            // read the parameters
+            while (!!(s = strtok_r(0, ";", & l_save)))
+            {
+                if (!parse_transport_option(& hdr->transport[idx], s))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    bool read_headers(LineParser *lp, struct RtspHeader *hdr)
+    {
+        // Set header defaults
+        hdr->accept_sdp = true;
+
         while (char *line = lp->getline())
         {
             char *save = 0;
@@ -174,7 +428,8 @@ public:
             if (!strncasecmp(header, "CSeq:", 5))
             {
                 char *s = strtok_r(0, " ", & save);
-                get_number(& hdr->cseq, s);
+                if (!get_number(& hdr->cseq, s))
+                    return false;
             }
             else if (!strncasecmp(header, "Accept:", 7))
             {
@@ -188,74 +443,81 @@ public:
                     }
                 }
             }
-
+            else if (!strncasecmp(header, "Transport:", 10))
+            {
+                if (!parse_transport(hdr, & save))
+                    return false;
+            }
+            else
+            {
+                PO_DEBUG("no parser for '%s'", header);
+            }
         }
+        return true;
     }
 
-    RtspCommand describe(LineParser *lp, const char *uri)
+    RtspCommand parse(LineParser *lp, const char *uri, RtspCommand cmd)
     {
         ASSERT(lp);
 
-        RtspHeaders headers = { .accept_sdp = true };
+        RtspHeader headers = { 0 };
         read_headers(lp, & headers);
 
-        int code = handler->describe(uri, & headers);
-        return (code == E_OK) ? C_DESCRIBE : C_UNKNOWN;
-    }
+        int code = handler->command(cmd, uri, & headers);
+        return (code == E_OK) ? cmd : C_UNKNOWN;
+    } 
 
-    RtspCommand options(LineParser *lp, const char *uri)
+    static bool is_allowable(const RtspCommand *allowable, RtspCommand cmd)
     {
-        ASSERT(lp);
-
-        RtspHeaders headers = { 0 };
-        read_headers(lp, & headers);
-
-        int code = handler->describe(uri, & headers);
-        return (code == E_OK) ? C_OPTIONS : C_UNKNOWN;
+        // Check if the command is permitted in this state
+        for (int i = 0; allowable[i] != C_UNKNOWN; i++)
+        {
+            if (allowable[i] == cmd) 
+                return true;
+        }
+        return false;
     }
 
-    RtspCommand parse(const RtspCommand *allowable, char *data, size_t s)
+    RtspCommand parse(const RtspCommand *allowable, char *data, size_t sz)
     {
         UNUSED(allowable); // TODO
-        if (!s) return handler->error(E_Not_Implemented);
+        if (!sz) return handler->error(E_Not_Implemented);
         ASSERT(data);
 
-        LineParser lp(data, s);
+        LineParser lp(data, sz);
 
         char *line = lp.getline();
-        if (!line) return handler->error(E_Not_Implemented);
+        if (!line) return handler->error(E_Bad_Request);
 
         char *save = 0;
         char *cmd = strtok_r(line, " ", & save);
-        if (!cmd) handler->error(E_Not_Implemented);
-        const int c = rlut(cmd_lut, cmd);
-        if (c == 0) {
+        if (!cmd) handler->error(E_Bad_Request);
+        const RtspCommand rtsp_cmd = (RtspCommand) rlut(cmd_lut, cmd);
+        if (rtsp_cmd == C_UNKNOWN) {
             PO_INFO("Unknown command '%s'", cmd);
-            return handler->error(E_Not_Implemented);
+            if (unsupported(cmd))
+                return handler->error(E_Not_Implemented);
+
+            return handler->error(E_Bad_Request);
         }
 
         // Check if the command is permitted in this state
-        bool found = false;
-        for (int i = 0; allowable[i] != C_UNKNOWN; i++)
-        {
-            if (allowable[i] == c) found = true;
-        }
-        if (!found)
+        if (!is_allowable(allowable, rtsp_cmd))
             return handler->error(E_Method_Not_Valid_in_This_State);
 
         char *uri = strtok_r(0, " ", & save);
         if (!uri) return handler->error(E_Bad_Request);
 
-        // Check it is version 2.0
+        // Check it is version 2.0 (I'm only supporting 2.0)
         char *version = strtok_r(0, " ", & save);
-        if (!version) return handler->error(E_Version_Not_Supported);
+        if (!version) return handler->error(E_Bad_Request);
         if (strcmp(version, "RTSP/2.0")) return handler->error(E_Version_Not_Supported);
 
-        switch((RtspCommand) c)
+        switch(rtsp_cmd)
         {
-            case C_OPTIONS : return options(& lp, uri);
-            case C_DESCRIBE : return describe(& lp, uri);
-            case C_SETUP : PO_DEBUG("SETUP"); break;
+            case C_DESCRIBE : // fall thru
+            case C_SETUP : // fall thru
+            case C_OPTIONS : return parse(& lp, uri, rtsp_cmd);
             case C_PAUSE : PO_DEBUG("PAUSE"); break;
             case C_PLAY : PO_DEBUG("PLAY"); break;
             case C_TEARDOWN : PO_DEBUG("TEARDOWN"); break;
@@ -275,14 +537,12 @@ class Session : public RTSP_Session
 {
     RTSP_Session::Handler *handler;
 
-    enum State
-    {
-        INIT,
-        READY,
-        PLAY,
-    };
-
     enum State state;
+
+    virtual enum State get_state() override
+    {
+        return state;
+    }
 
     void set_state(enum State s)
     {
@@ -315,23 +575,12 @@ class Session : public RTSP_Session
             C_PAUSE,
             C_UNKNOWN, // terminate
         };
-        /*
-        static const RtspCommand play[] = {
-            C_TEARDOWN,
-            C_SETUP,
-            C_OPTIONS,
-            C_DESCRIBE,
-            C_PLAY,
-            C_PAUSE,
-            C_UNKNOWN, // terminate
-        };
-        */
 
         switch (state)
         {
             case INIT : return init;
             case READY : return ready;
-            case PLAY : return ready;
+            case PLAY : return ready; // same commands as READY
             default : ASSERT(0);
         }
         return init;

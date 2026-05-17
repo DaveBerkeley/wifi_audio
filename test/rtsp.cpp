@@ -45,17 +45,21 @@ public:
         return last_error;
     }
 
-    virtual int describe(const char *uri, RtspHeaders *hdrs) override
+    virtual int command(RtspCommand cmd, const char *uri, RtspHeader *hdrs) override
     {
-        PO_DEBUG("uri=%s hdr=%p", uri, hdrs);
-        if (!hdrs->accept_sdp) return last_error = E_Not_Acceptable;
+        PO_DEBUG("cmd=%s uri=%s hdr=%p", lut(cmd_lut, cmd), uri, hdrs);
+        switch (cmd)
+        {
+            case C_DESCRIBE : 
+            {
+                if (!hdrs->accept_sdp) return last_error = E_Unsupported_Media_Type;
+                break;
+            }
+            case C_SETUP : 
+                break;
+            default : ASSERT(0);
+        }
 
-        return E_OK;
-    }
-
-    virtual int options(const char *uri, RtspHeaders *hdrs) override
-    {
-        PO_DEBUG("uri=%s hdr=%p", uri, hdrs);
         return E_OK;
     }
 };
@@ -78,12 +82,13 @@ TEST(RTSP, Describe)
         0,
     };
 
-    char buff[256];
+    char buff[1024];
     const size_t s = set_buff(buff, sizeof(buff), describe);
 
     int code = session->process(buff, s);
     EXPECT_EQ(code, C_DESCRIBE);
     EXPECT_EQ(E_OK, handler.get_last_error());
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     delete session;
 }
@@ -100,12 +105,13 @@ TEST(RTSP, NoSdp)
         0,
     };
 
-    char buff[256];
+    char buff[1024];
     const size_t s = set_buff(buff, sizeof(buff), describe);
 
     int code = session->process(buff, s);
     EXPECT_EQ(code, C_UNKNOWN);
-    EXPECT_EQ(E_Not_Acceptable, handler.get_last_error());
+    EXPECT_EQ(E_Unsupported_Media_Type, handler.get_last_error());
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     delete session;
 }
@@ -121,12 +127,13 @@ TEST(RTSP, WrongVersion)
         0,
     };
 
-    char buff[256];
+    char buff[1024];
     const size_t s = set_buff(buff, sizeof(buff), describe);
 
     int code = session->process(buff, s);
     EXPECT_EQ(code, C_UNKNOWN);
     EXPECT_EQ(E_Version_Not_Supported, handler.get_last_error());
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     delete session;
 }
@@ -142,12 +149,13 @@ TEST(RTSP, BadCommand)
         0,
     };
 
-    char buff[256];
+    char buff[1024];
     const size_t s = set_buff(buff, sizeof(buff), describe);
 
     int code = session->process(buff, s);
     EXPECT_EQ(code, C_UNKNOWN);
-    EXPECT_EQ(E_Not_Implemented, handler.get_last_error());
+    EXPECT_EQ(E_Bad_Request, handler.get_last_error());
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     delete session;
 }
@@ -166,12 +174,88 @@ TEST(RTSP, IgnoreLeading)
         0,
     };
 
-    char buff[256];
+    char buff[1024];
     const size_t s = set_buff(buff, sizeof(buff), describe);
 
     int code = session->process(buff, s);
     EXPECT_EQ(code, C_DESCRIBE);
     EXPECT_EQ(E_OK, handler.get_last_error());
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
+
+    delete session;
+}
+
+TEST(RTSP, Setup)
+{
+    Handler handler;
+    RTSP_Session *session = RTSP_Session::create(& handler);
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
+
+    const char* describe[] = {
+        "SETUP rtsp://server.example.com/fizzle/foo RTSP/2.0",
+        "Transport: RTP/AVP;unicast;client_port=5000-5001",
+        "",
+        0,
+    };
+
+    char buff[1024];
+    const size_t s = set_buff(buff, sizeof(buff), describe);
+
+    int code = session->process(buff, s);
+    EXPECT_EQ(code, C_SETUP);
+    EXPECT_EQ(E_OK, handler.get_last_error());
+    // check the state transition
+    EXPECT_EQ(RTSP_Session::READY, session->get_state());
+
+    delete session;
+}
+
+TEST(RTSP, SetupComplex)
+{
+    Handler handler;
+    RTSP_Session *session = RTSP_Session::create(& handler);
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
+
+    const char* describe[] = {
+        "SETUP rtsp://server.example.com/fizzle/foo RTSP/2.0",
+        "Transport: RTP/AVP/TCP;unicast;interleaved=0-1;mode=PLAY;rtcp-mux, RTP/AVP/UDP;unicast;client_port=4588-4589;ssrc=6095d7d7;mode=PLAY, RTP/AVP;multicast;destination=225.219.201.15;port=7000-7001;ttl=16",
+        "",
+        0,
+    };
+
+    char buff[1024];
+    const size_t s = set_buff(buff, sizeof(buff), describe);
+
+    int code = session->process(buff, s);
+    EXPECT_EQ(code, C_SETUP);
+    EXPECT_EQ(E_OK, handler.get_last_error());
+    // check the state transition
+    EXPECT_EQ(RTSP_Session::READY, session->get_state());
+
+    delete session;
+}
+
+TEST(RTSP, SetupComma)
+{
+    Handler handler;
+    RTSP_Session *session = RTSP_Session::create(& handler);
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
+
+    const char* describe[] = {
+        "SETUP rtsp://server.example.com/fizzle/foo RTSP/2.0",
+        "Transport: RTP/AVP;unicast;src_addr=192.168.1.1,224.0.0.1;dest_addr=224.0.0.1,192.168.1.2",
+        "",
+        0,
+    };
+
+    char buff[1024];
+    const size_t s = set_buff(buff, sizeof(buff), describe);
+
+    int code = session->process(buff, s);
+    EXPECT_EQ(code, C_SETUP);
+    EXPECT_EQ(E_OK, handler.get_last_error());
+    // check the state transition
+    EXPECT_EQ(RTSP_Session::READY, session->get_state());
 
     delete session;
 }
