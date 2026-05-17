@@ -33,28 +33,13 @@ public:
      *
      */
 
-typedef enum rtsp_commands
-{
-    OPTIONS = 1,    // required
-    DESCRIBE,       // recommended
-    SETUP,          // required
-    PAUSE,          // required
-    PLAY,           // required
-    //PLAY_NOTIFY,    // required S->C
-    TEARDOWN,       // required
-}   RtspCommand;
-
-    /*
-     *
-     */
-
 const LUT cmd_lut[] = {
-    { "OPTIONS", OPTIONS, },
-    { "DESCRIBE", DESCRIBE, },
-    { "SETUP", SETUP, },
-    { "PAUSE", PAUSE, },
-    { "PLAY", PLAY, },
-    { "TEARDOWN", TEARDOWN, },
+    { "OPTIONS",    C_OPTIONS, },
+    { "DESCRIBE",   C_DESCRIBE, },
+    { "SETUP",      C_SETUP, },
+    { "PAUSE",      C_PAUSE, },
+    { "PLAY",       C_PLAY, },
+    { "TEARDOWN",   C_TEARDOWN, },
     { 0, 0 },
 };
 
@@ -99,33 +84,24 @@ public:
 };
 
     /*
-     *  RTSP Response codes
+     *
      */
 
-enum ErrorCodes
-{
-    Bad_Request = 400,
-    Not_Acceptable = 406,
-    Not_Implemented = 501,
-    Service_Unavailable = 503,
-    Version_Not_Supported = 505,
-};
-
-static LUT response_lut[] = {
-    {   "OK", 200 },
+LUT response_lut[] = {
+    {   "OK", E_OK },
     {   "Continue", 100 },
     {   "Moved Permanently", 301 },
     {   "Found", 302 },
     {   "See Other", 303 },
     {   "Not Modified", 304 },
     {   "Use Proxy", 305 },
-    {   "Bad Request", Bad_Request },
+    {   "Bad Request", E_Bad_Request },
     {   "Unauthorized", 401 },
     {   "Payment Required", 402 },
     {   "Forbidden", 403 },
     {   "Not Found", 404 },
     {   "Method Not Allowed", 405 },
-    {   "Not Acceptable", Not_Acceptable },
+    {   "Not Acceptable", E_Not_Acceptable },
     {   "Proxy Authentication Required", 407 },
     {   "Request Timeout", 408 },
     {   "Gone", 410 },
@@ -133,10 +109,10 @@ static LUT response_lut[] = {
     {   "Request Message Body Too Large", 413 },
     {   "Request-URI Too Long", 414 },
     {   "Unsupported Media Type", 415 },
-    {   "Parameter Not Understood", 451 },
+    {   "Parameter Not Understood", E_Parameter_Not_Understood },
     {   "Not Enough Bandwidth", 453 },
     {   "Session Not Found", 454 },
-    {   "Method Not Valid in This State", 455 },
+    {   "Method Not Valid in This State", E_Method_Not_Valid_in_This_State },
     {   "Header Field Not Valid for Resource", 456 },
     {   "Invalid Range", 457 },
     {   "arameter Is Read-Only", 458 },
@@ -152,11 +128,11 @@ static LUT response_lut[] = {
     {   "Connection Credentials Not Accepted", 471 },
     {   "Failure to Establish Secure Connection", 472 },
     {   "Internal Server Error", 500 },
-    {   "Not Implemented", Not_Implemented },
+    {   "Not Implemented", E_Not_Implemented },
     {   "Bad Gateway", 502 },
-    {   "Service Unavailable", Service_Unavailable },
+    {   "Service Unavailable", E_Service_Unavailable },
     {   "Gateway Timeout", 504 },
-    {   "RTSP Version Not Supported", Version_Not_Supported },
+    {   "RTSP Version Not Supported", E_Version_Not_Supported },
     {   "Option Not Supported", 551 },
     {   "Proxy Unavailable", 553 },
     { 0, 0 },
@@ -168,14 +144,14 @@ static LUT response_lut[] = {
 
 class Parser
 {
-public:
-    struct Headers
-    {
-        int cseq;
-        bool accept_sdp;
-    };
+    RTSP_Session::Handler *handler;
 
-    Parser() { }
+public:
+    Parser(RTSP_Session::Handler *h)
+    :   handler(h)
+    {
+        ASSERT(handler);
+    }
 
     bool get_number(int *result, char *line)
     {
@@ -186,7 +162,7 @@ public:
         return true;
     }
 
-    void read_headers(LineParser *lp, struct Headers *hdr)
+    void read_headers(LineParser *lp, struct RtspHeaders *hdr)
     {
         while (char *line = lp->getline())
         {
@@ -195,17 +171,17 @@ public:
             if (!header) break;
             PO_DEBUG("%s", header);
 
-            if (!strcmp(header, "CSeq:"))
+            if (!strncasecmp(header, "CSeq:", 5))
             {
                 char *s = strtok_r(0, " ", & save);
                 get_number(& hdr->cseq, s);
             }
-            else if (!strcmp(header, "Accept:"))
+            else if (!strncasecmp(header, "Accept:", 7))
             {
                 hdr->accept_sdp = false;
                 while (char *s = strtok_r(0, " ", & save))
                 {
-                    if (!strcmp(s, "application/sdp"))
+                    if (!strncasecmp(s, "application/sdp", 15))
                     {
                         hdr->accept_sdp = true;
                         break;
@@ -216,64 +192,78 @@ public:
         }
     }
 
-    int describe(LineParser *lp, const char *uri)
+    RtspCommand describe(LineParser *lp, const char *uri)
     {
         ASSERT(lp);
-        PO_DEBUG("DESCRIBE '%s'", uri);
 
-        Headers headers = { .accept_sdp = true };
-
-        // read the headers
+        RtspHeaders headers = { .accept_sdp = true };
         read_headers(lp, & headers);
 
-        PO_DEBUG("cseq=%d", headers.cseq);
-        PO_DEBUG("accept_sdp=%d", headers.accept_sdp);
-
-        if (!headers.accept_sdp) return Not_Acceptable;
-
-        return code;
+        int code = handler->describe(uri, & headers);
+        return (code == E_OK) ? C_DESCRIBE : C_UNKNOWN;
     }
 
-    int parse(char *data, size_t s)
+    RtspCommand options(LineParser *lp, const char *uri)
     {
-        if (!s) return Not_Implemented;
+        ASSERT(lp);
+
+        RtspHeaders headers = { 0 };
+        read_headers(lp, & headers);
+
+        int code = handler->describe(uri, & headers);
+        return (code == E_OK) ? C_OPTIONS : C_UNKNOWN;
+    }
+
+    RtspCommand parse(const RtspCommand *allowable, char *data, size_t s)
+    {
+        UNUSED(allowable); // TODO
+        if (!s) return handler->error(E_Not_Implemented);
         ASSERT(data);
 
         LineParser lp(data, s);
 
         char *line = lp.getline();
-        if (!line) return Not_Implemented;
+        if (!line) return handler->error(E_Not_Implemented);
 
         char *save = 0;
         char *cmd = strtok_r(line, " ", & save);
-        if (!cmd) return false;
+        if (!cmd) handler->error(E_Not_Implemented);
         const int c = rlut(cmd_lut, cmd);
         if (c == 0) {
             PO_INFO("Unknown command '%s'", cmd);
-            return Not_Implemented;
+            return handler->error(E_Not_Implemented);
         }
 
+        // Check if the command is permitted in this state
+        bool found = false;
+        for (int i = 0; allowable[i] != C_UNKNOWN; i++)
+        {
+            if (allowable[i] == c) found = true;
+        }
+        if (!found)
+            return handler->error(E_Method_Not_Valid_in_This_State);
+
         char *uri = strtok_r(0, " ", & save);
-        if (!uri) return Service_Unavailable;
+        if (!uri) return handler->error(E_Bad_Request);
 
         // Check it is version 2.0
         char *version = strtok_r(0, " ", & save);
-        if (!version) return Version_Not_Supported;
-        if (strcmp(version, "RTSP/2.0")) return Version_Not_Supported;
+        if (!version) return handler->error(E_Version_Not_Supported);
+        if (strcmp(version, "RTSP/2.0")) return handler->error(E_Version_Not_Supported);
 
         switch((RtspCommand) c)
         {
-            case OPTIONS : PO_DEBUG("OPTIONS"); break;
-            case DESCRIBE : return describe(& lp, uri);
-            case SETUP : PO_DEBUG("SETUP"); break;
-            case PAUSE : PO_DEBUG("PAUSE"); break;
-            case PLAY : PO_DEBUG("PLAY"); break;
-            case TEARDOWN : PO_DEBUG("TEARDOWN"); break;
+            case C_OPTIONS : return options(& lp, uri);
+            case C_DESCRIBE : return describe(& lp, uri);
+            case C_SETUP : PO_DEBUG("SETUP"); break;
+            case C_PAUSE : PO_DEBUG("PAUSE"); break;
+            case C_PLAY : PO_DEBUG("PLAY"); break;
+            case C_TEARDOWN : PO_DEBUG("TEARDOWN"); break;
             default : ASSERT(0); break;
         }
 
         PO_DEBUG("");
-        return Bad_Request;
+        return handler->error(E_Bad_Request);
     }
 };
 
@@ -285,23 +275,107 @@ class Session : public RTSP_Session
 {
     RTSP_Session::Handler *handler;
 
-    virtual void process(char *data, size_t s) override
+    enum State
     {
-        Parser parser;
+        INIT,
+        READY,
+        PLAY,
+    };
 
-        int code = parser.parse(data, s);
-        if (code != 200)
+    enum State state;
+
+    void set_state(enum State s)
+    {
+        state = s;
+
+        static const LUT states[] = {
+            {   "INIT", INIT,   },
+            {   "READY", READY,   },
+            {   "PLAY", PLAY,   },
+            { 0, 0 },
+        };
+
+        PO_DEBUG("state:=%s", lut(states, state));
+    }
+
+    const RtspCommand *allowable()
+    {
+        static const RtspCommand init[] = {
+            C_SETUP,
+            C_OPTIONS,
+            C_DESCRIBE,
+            C_UNKNOWN, // terminate
+        };
+        static const RtspCommand ready[] = {
+            C_TEARDOWN,
+            C_SETUP,
+            C_OPTIONS,
+            C_DESCRIBE,
+            C_PLAY,
+            C_PAUSE,
+            C_UNKNOWN, // terminate
+        };
+        /*
+        static const RtspCommand play[] = {
+            C_TEARDOWN,
+            C_SETUP,
+            C_OPTIONS,
+            C_DESCRIBE,
+            C_PLAY,
+            C_PAUSE,
+            C_UNKNOWN, // terminate
+        };
+        */
+
+        switch (state)
         {
-            PO_ERROR("%s %d", lut(response_lut, code), code);
-            // TODO : send response code
+            case INIT : return init;
+            case READY : return ready;
+            case PLAY : return ready;
+            default : ASSERT(0);
         }
-        PO_DEBUG("");
+        return init;
+    }
+
+    virtual RtspCommand process(char *data, size_t s) override
+    {
+        Parser parser(handler);
+        RtspCommand cmd = parser.parse(allowable(), data, s);
+
+        if (cmd == C_TEARDOWN)
+        {
+            // TODO : terminate the state machine
+            ASSERT(0);
+        }
+
+        switch (state)
+        {
+            case INIT :
+            {
+                if (cmd == C_SETUP) set_state(READY);
+                break;
+            }
+            case READY :
+            {
+                if (cmd == C_PLAY) set_state(PLAY);
+                break;
+            }
+            case PLAY :
+            {
+                if (cmd == C_PAUSE) set_state(READY);
+                break;
+            }
+            default : ASSERT(0);
+        }
+
+        return cmd;
     }
 
 public:
     Session(RTSP_Session::Handler *h)
     :   handler(h)
     {
+        set_state(INIT);
     }
 };
 
