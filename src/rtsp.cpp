@@ -396,7 +396,6 @@ public:
             if (protocol && !strcmp("RTP", protocol))
                 hdr->transport[idx].rtp = true;
             char *profile = strtok_r(0, "/", & t_save);
-            PO_DEBUG("profile='%s'", profile); // TODO
             char *transport = strtok_r(0, "/", & t_save);
             if (transport) hdr->transport[idx].transport = transport;
 
@@ -456,15 +455,15 @@ public:
         return true;
     }
 
-    RtspCommand parse(LineParser *lp, const char *uri, RtspCommand cmd)
+    RtspCommand parse(LineParser *lp, const char *uri, RtspCommand cmd, int error_code)
     {
         ASSERT(lp);
 
         RtspHeader headers = { 0 };
         read_headers(lp, & headers);
 
-        int code = handler->command(cmd, uri, & headers);
-        return (code == E_OK) ? cmd : C_UNKNOWN;
+        int code = handler->command(cmd, uri, & headers, error_code);
+        return ((code == E_OK) && (error_code == E_OK)) ? cmd : C_UNKNOWN;
     } 
 
     static bool is_allowable(const RtspCommand *allowable, RtspCommand cmd)
@@ -480,8 +479,9 @@ public:
 
     RtspCommand parse(const RtspCommand *allowable, char *data, size_t sz)
     {
-        UNUSED(allowable); // TODO
-        if (!sz) return handler->error(E_Not_Implemented);
+        int code = E_OK;
+
+        if (!sz) return handler->error(E_Bad_Request);
         ASSERT(data);
 
         LineParser lp(data, sz);
@@ -496,31 +496,32 @@ public:
         if (rtsp_cmd == C_UNKNOWN) {
             PO_INFO("Unknown command '%s'", cmd);
             if (unsupported(cmd))
-                return handler->error(E_Not_Implemented);
-
-            return handler->error(E_Bad_Request);
+                code = E_Not_Implemented;
+            else
+                return handler->error(E_Bad_Request);
         }
 
         // Check if the command is permitted in this state
-        if (!is_allowable(allowable, rtsp_cmd))
-            return handler->error(E_Method_Not_Valid_in_This_State);
+        if (code == E_OK)
+            if (!is_allowable(allowable, rtsp_cmd))
+                code = E_Method_Not_Valid_in_This_State;
 
         char *uri = strtok_r(0, " ", & save);
-        if (!uri) return handler->error(E_Bad_Request);
+        if (!uri) code = E_Bad_Request;
 
-        // Check it is version 2.0 (I'm only supporting 2.0)
+        // Check it is version 1.0 (I'm only supporting 1.0)
         char *version = strtok_r(0, " ", & save);
-        if (!version) return handler->error(E_Bad_Request);
-        if (strcmp(version, "RTSP/2.0")) return handler->error(E_Version_Not_Supported);
+        if (!version) code = E_Bad_Request;
+        if (strcmp(version, "RTSP/1.0")) code = E_Version_Not_Supported;
 
         switch(rtsp_cmd)
         {
             case C_DESCRIBE : // fall thru
             case C_SETUP : // fall thru
-            case C_OPTIONS : return parse(& lp, uri, rtsp_cmd);
-            case C_PAUSE : PO_DEBUG("PAUSE"); break;
-            case C_PLAY : PO_DEBUG("PLAY"); break;
-            case C_TEARDOWN : PO_DEBUG("TEARDOWN"); break;
+            case C_OPTIONS : return parse(& lp, uri, rtsp_cmd, code);
+            case C_PAUSE : // fall thru TODO
+            case C_PLAY : // fall thru TODO
+            case C_TEARDOWN : // fall thru TODO
             default : ASSERT(0); break;
         }
 
