@@ -1,6 +1,0 @@
-set debuginfod enabled off
-b main
-tui enable
-
-set args --gtest_filter="RTSP.*"
-

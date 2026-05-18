@@ -9,6 +9,7 @@
 #include "panglos/io.h"
 
 #include "rtsp.h"
+#include "rtsp_server.h"
 
 static size_t set_buff(char *buff, size_t s, const char **lines)
 {
@@ -37,136 +38,6 @@ public:
     virtual int tx(const char* data, int n) override
     {
         return socket->send((const uint8_t*) data, n);
-    }
-};
-
-    /*
-     *
-     */
-
-class TestHandler : public RTSP_Session::Handler
-{
-    int last_error;
-    int session_id;
-    int session_version; // increment if values have changed ..
-    const char *ip_addr;
-    TestSocketOut out;
-    panglos::FmtOut fmt;
-
-public:
-    TestHandler(panglos::Socket *s, const char *ip, int sid)
-    :   last_error(E_OK),
-        session_id(sid),
-        session_version(1),
-        ip_addr(ip),
-        out(s),
-        fmt(& out)
-    {
-    }
-
-    virtual RtspCommand error(int code) override
-    {
-        send_error(0, code);
-        return C_UNKNOWN;
-    }
-
-    virtual int get_last_error() override
-    {
-        return last_error;
-    }
-
-    int describe(const char *uri, RtspHeader *hdrs)
-    {
-        UNUSED(uri);
-
-        // SDP payload
-        const char *sdp_fmt = 
-        "v=0\r\n" // protocol version
-        "o=- %d %d IN IP4 %s\r\n"
-        "s=Audio Stream\r\n"
-        "c=IN IP4 0.0.0.0\r\n" // connection data - fixed during SETUP phase
-        "t=0 0\r\n" // timing 
-        "m=audio 0 RTP/AVP 96\r\n" // media announcement : 96 = dynamic payload
-        "a=rtpmap:96 L16/48000/2\r\n" // map the payload type
-        ;
-
-        char buff[1024];
-        snprintf(buff, sizeof(buff), sdp_fmt, session_id, session_version, ip_addr);
-
-        int code = E_OK;
-        fmt.printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
-        fmt.printf("CSeq: %d\r\n", hdrs->cseq);
-        fmt.printf("Content-Type: application/sdp\r\n");
-        fmt.printf("Content-Length: %ld\r\n", strlen(buff));
-        fmt.printf("\r\n");
-        fmt.printf("%s", buff);
-        return code;
-    }
-
-    int options(const char *uri, RtspHeader *hdrs)
-    {
-        UNUSED(uri);
-
-        char buff[1024];
-
-        char *s = buff;
-        size_t sz = sizeof(buff);
-        bool first = true;
-        for (const LUT *_lut = cmd_lut; _lut->text; _lut++)
-        {
-            snprintf(s, sz, "%s%s", first ? "" : ", ", _lut->text);
-            first = false;
-            s += strlen(s);
-            sz = sizeof(buff) - strlen(buff);
-        }
-
-        int code = E_OK;
-        fmt.printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
-        fmt.printf("CSeq: %d\r\n", hdrs->cseq);
-        fmt.printf("Public: %s\r\n", buff);
-        fmt.printf("\r\n");
-        return code;
-    }
-
-    int send_error(RtspHeader *hdrs, int error_code)
-    {
-        // Error Response
-        fmt.printf("RTSP/1.0 %d %s\r\n", error_code, lut(response_lut, error_code));
-        if (hdrs)
-            fmt.printf("CSeq: %d\r\n", hdrs->cseq);
-        fmt.printf("\r\n");
-        return last_error = error_code;
-    }
-
-    virtual int command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, int error_code) override
-    {
-        PO_DEBUG("cmd=%s uri=%s hdr=%p err=%d", lut(cmd_lut, cmd), uri, hdrs, error_code);
-
-        if (error_code != E_OK)
-        {
-            // Error Response
-            return send_error(hdrs, error_code);
-        }
-
-        switch (cmd)
-        {
-            case C_DESCRIBE : 
-            {
-                if (!hdrs->accept_sdp) return send_error(hdrs, E_Unsupported_Media_Type);
-                return describe(uri, hdrs);
-                break;
-            }
-            case C_OPTIONS :
-            {
-                return options(uri, hdrs);
-                break;
-            }
-            case C_SETUP : 
-                break;
-            default : ASSERT(0);
-        }
-
-        return E_OK;
     }
 };
 
@@ -217,11 +88,13 @@ public:
      */
 
 const char *ip_addr = "127.0.0.1";
+const char *port = "1234";
+const int sid = 12345;
 
 TEST(RTSP, Describe)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -263,7 +136,7 @@ TEST(RTSP, Describe)
 TEST(RTSP, NoSdp)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -288,7 +161,7 @@ TEST(RTSP, NoSdp)
 TEST(RTSP, WrongVersion)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -312,7 +185,7 @@ TEST(RTSP, WrongVersion)
 TEST(RTSP, BadCommand)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -336,7 +209,7 @@ TEST(RTSP, BadCommand)
 TEST(RTSP, IgnoreLeading)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -363,7 +236,7 @@ TEST(RTSP, IgnoreLeading)
 TEST(RTSP, Setup)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -390,7 +263,7 @@ TEST(RTSP, Setup)
 TEST(RTSP, SetupComplex)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -417,7 +290,7 @@ TEST(RTSP, SetupComplex)
 TEST(RTSP, SetupComma)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -444,7 +317,7 @@ TEST(RTSP, SetupComma)
 TEST(RTSP, Options)
 {
     TestSocket socket;
-    TestHandler handler(& socket, ip_addr, 12345);
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
