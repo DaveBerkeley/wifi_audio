@@ -27,6 +27,7 @@ extern LUT response_lut[];
 struct RtspHeader
 {
     int cseq;
+    int session_id;
     bool accept_sdp;
 
     struct IpAddr

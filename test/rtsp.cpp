@@ -81,6 +81,7 @@ public:
     }
 
     char *get_buff() { return buff; }
+    void reset() { idx = 0; }
 };
 
     /*
@@ -294,7 +295,7 @@ TEST(RTSP, SetupComma)
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
-    const char* describe[] = {
+    const char* setup[] = {
         "SETUP rtsp://1.2.3.4:1234/stream RTSP/1.0",
         "Transport: RTP/AVP;unicast;src_addr=192.168.1.1,224.0.0.1;dest_addr=224.0.0.1,192.168.1.2",
         "",
@@ -302,7 +303,7 @@ TEST(RTSP, SetupComma)
     };
 
     char buff[1024];
-    const size_t s = set_buff(buff, sizeof(buff), describe);
+    const size_t s = set_buff(buff, sizeof(buff), setup);
 
     int code = session->process(buff, s);
     EXPECT_EQ(code, C_SETUP);
@@ -341,6 +342,59 @@ TEST(RTSP, Options)
         "RTSP/1.0 200 OK\r\n"
         "CSeq: 1234\r\n"
         "Public: OPTIONS, DESCRIBE, SETUP, PAUSE, PLAY, TEARDOWN\r\n"
+        "\r\n",
+        socket.get_buff());
+
+    delete session;
+}
+
+TEST(RTSP, Play)
+{
+    TestSocket socket;
+    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    RTSP_Session *session = RTSP_Session::create(& handler);
+    EXPECT_EQ(RTSP_Session::INIT, session->get_state());
+
+    const char* setup[] = {
+        "SETUP rtsp://1.2.3.4:1234/stream RTSP/1.0",
+        "CSeq: 1233",
+        "Transport: RTP/AVP;unicast;src_addr=192.168.1.1,224.0.0.1;dest_addr=224.0.0.1,192.168.1.2",
+        "",
+        0,
+    };
+
+    char buff[1024];
+    size_t s = set_buff(buff, sizeof(buff), setup);
+
+    int code = session->process(buff, s);
+    EXPECT_EQ(code, C_SETUP);
+    EXPECT_EQ(E_OK, handler.get_last_error());
+    // check the state transition
+    EXPECT_EQ(RTSP_Session::READY, session->get_state());
+
+    socket.reset();
+    
+    const char* play[] = {
+        "PLAY rtsp://1.2.3.4:1234/stream RTSP/1.0",
+        "CSeq: 1234",
+        "Session: 3456",
+        "",
+        0,
+    };
+
+    s = set_buff(buff, sizeof(buff), play);
+
+    code = session->process(buff, s);
+    EXPECT_EQ(code, C_PLAY);
+    EXPECT_EQ(E_OK, handler.get_last_error());
+    // check the state transition
+    EXPECT_EQ(RTSP_Session::PLAY, session->get_state());
+
+    EXPECT_STREQ(
+        "RTSP/1.0 200 OK\r\n"
+        "CSeq: 1234\r\n"
+        "Session: 3456\r\n"
+        "RTP-Info: url=rtsp://127.0.0.1/media.mp4/trackID=0;seq=1;rtptime=0\r\n"
         "\r\n",
         socket.get_buff());
 

@@ -430,6 +430,12 @@ public:
                 if (!get_number(& hdr->cseq, s))
                     return false;
             }
+            else if (!strncasecmp(header, "Session:", 8))
+            {
+                char *s = strtok_r(0, " ", & save);
+                if (!get_number(& hdr->session_id, s))
+                    return false;
+            }
             else if (!strncasecmp(header, "Accept:", 7))
             {
                 hdr->accept_sdp = false;
@@ -518,11 +524,11 @@ public:
 
         switch(rtsp_cmd)
         {
+            case C_PLAY : // fall thru
             case C_DESCRIBE : // fall thru
             case C_SETUP : // fall thru
             case C_OPTIONS : return parse(& lp, uri, rtsp_cmd, code);
             case C_PAUSE : // fall thru TODO
-            case C_PLAY : // fall thru TODO
             case C_TEARDOWN : // fall thru TODO
             default : ASSERT(0); break;
         }

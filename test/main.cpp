@@ -1,5 +1,6 @@
 
 #include <stdarg.h>
+#include <sys/time.h>
 
 #include <gtest/gtest.h>
 
@@ -87,7 +88,11 @@ const char *get_task()
 
 uint32_t get_time(void)
 {
-    return 0;
+    struct timeval  tv;
+    gettimeofday(&tv, NULL);
+
+    uint32_t ms = (uint32_t) ((tv.tv_sec * 1000) + (tv.tv_usec / 1000));
+    return ms;
 }
 
 }

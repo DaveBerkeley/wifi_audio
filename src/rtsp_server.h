@@ -37,15 +37,23 @@ class RTSP_Handler : public RTSP_Session::Handler
     int session_version; // increment if values have changed ..
     const char *ip_addr;
     const char *port;
-    SocketOut out;
-    panglos::FmtOut fmt;
+    panglos::Socket *socket;
+    char *buff;
+    panglos::CharOut *out;
+    panglos::FmtOut *fmt;
 
+    // command responses
     int describe(const char *uri, RtspHeader *hdrs);
     int options(const char *uri, RtspHeader *hdrs);
+    int setup(const char *uri, RtspHeader *hdrs);
+    int play(const char *uri, RtspHeader *hdrs);
+
     int send_error(RtspHeader *hdrs, int error_code);
+    void flush();
 
 public:
     RTSP_Handler(RTP_Engine *rtp, panglos::Socket *s, const char *ip, const char *port, int sid);
+    ~RTSP_Handler();
 
     virtual RtspCommand error(int code) override;
     virtual int get_last_error() override;
