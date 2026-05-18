@@ -90,6 +90,7 @@ public:
     class Handler
     {
     public:
+        virtual ~Handler() { }
         virtual RtspCommand error(int code) = 0;
         virtual int get_last_error() = 0;        
         virtual int command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, int error_code) = 0;

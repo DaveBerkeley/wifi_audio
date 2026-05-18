@@ -25,11 +25,11 @@ static size_t set_buff(char *buff, size_t s, const char **lines)
     return total;
 }
 
-class SocketOut : public panglos::Out
+class TestSocketOut : public panglos::Out
 {
     panglos::Socket *socket;
 public:
-    SocketOut(panglos::Socket *s)
+    TestSocketOut(panglos::Socket *s)
     :   socket(s)
     {
     }
@@ -44,17 +44,17 @@ public:
      *
      */
 
-class Handler : public RTSP_Session::Handler
+class TestHandler : public RTSP_Session::Handler
 {
     int last_error;
     int session_id;
     int session_version; // increment if values have changed ..
     const char *ip_addr;
-    SocketOut out;
+    TestSocketOut out;
     panglos::FmtOut fmt;
 
 public:
-    Handler(panglos::Socket *s, const char *ip, int sid)
+    TestHandler(panglos::Socket *s, const char *ip, int sid)
     :   last_error(E_OK),
         session_id(sid),
         session_version(1),
@@ -221,7 +221,7 @@ const char *ip_addr = "127.0.0.1";
 TEST(RTSP, Describe)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -263,7 +263,7 @@ TEST(RTSP, Describe)
 TEST(RTSP, NoSdp)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -288,7 +288,7 @@ TEST(RTSP, NoSdp)
 TEST(RTSP, WrongVersion)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -312,7 +312,7 @@ TEST(RTSP, WrongVersion)
 TEST(RTSP, BadCommand)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -336,7 +336,7 @@ TEST(RTSP, BadCommand)
 TEST(RTSP, IgnoreLeading)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -363,7 +363,7 @@ TEST(RTSP, IgnoreLeading)
 TEST(RTSP, Setup)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -390,7 +390,7 @@ TEST(RTSP, Setup)
 TEST(RTSP, SetupComplex)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -417,7 +417,7 @@ TEST(RTSP, SetupComplex)
 TEST(RTSP, SetupComma)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -444,7 +444,7 @@ TEST(RTSP, SetupComma)
 TEST(RTSP, Options)
 {
     TestSocket socket;
-    Handler handler(& socket, ip_addr, 12345);
+    TestHandler handler(& socket, ip_addr, 12345);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 

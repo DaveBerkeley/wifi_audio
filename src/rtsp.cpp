@@ -501,6 +501,8 @@ public:
                 return handler->error(E_Bad_Request);
         }
 
+        PO_DEBUG("%s", cmd);
+
         // Check if the command is permitted in this state
         if (code == E_OK)
             if (!is_allowable(allowable, rtsp_cmd))
