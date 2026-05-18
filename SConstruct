@@ -2,11 +2,13 @@
 files = [
     'src/rtsp.cpp',
     'src/rtsp_server.cpp',
+    'src/rtp.cpp',
 
     'test/main.cpp',
     'test/storage.cpp',
     'test/rtsp.cpp',
     'test/rtsp_server.cpp',
+    'test/rtp.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',

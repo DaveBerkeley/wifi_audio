@@ -32,6 +32,7 @@ public:
 
 class RTSP_Handler : public RTSP_Session::Handler
 {
+    RTP_Engine *rtp;
     int last_error;
     int session_id;
     int session_version; // increment if values have changed ..

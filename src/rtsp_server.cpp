@@ -6,6 +6,7 @@
 #include "panglos/debug.h"
 
 #include "rtsp_server.h"
+#include "rtp.h"
 
 using namespace panglos;
 
@@ -36,8 +37,9 @@ void SocketOut::set_socket(Socket *s)
      *
      */
 
-RTSP_Handler::RTSP_Handler(RTP_Engine *, panglos::Socket *s, const char *ip, const char *_port, int sid)
-:   last_error(E_OK),
+RTSP_Handler::RTSP_Handler(RTP_Engine *_rtp, panglos::Socket *s, const char *ip, const char *_port, int sid)
+:   rtp(_rtp),
+    last_error(E_OK),
     session_id(sid),
     session_version(1),
     ip_addr(ip),
@@ -151,9 +153,11 @@ int RTSP_Handler::setup(const char *uri, RtspHeader *hdrs)
     PO_DEBUG("%d %s", code, lut(response_lut, code));
     fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
     fmt->printf("CSeq: %d\r\n", hdrs->cseq);
+    int rtp_port = 6000, rtcp_port= 6001;
+    ASSERT(rtp);
+    rtp->get_server_ports(& rtp_port, & rtcp_port);
     fmt->printf("Transport: RTP/AVP;unicast;server_port=%d-%d;session=%d\r\n", 
-        6000, 6001, 
-        session_id);
+        rtp_port, rtcp_port, session_id);
     fmt->printf("Session: %d\r\n", session_id);
     fmt->printf("\r\n");
     flush();

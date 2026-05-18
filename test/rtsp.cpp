@@ -10,6 +10,7 @@
 
 #include "rtsp.h"
 #include "rtsp_server.h"
+#include "rtp.h"
 
 static size_t set_buff(char *buff, size_t s, const char **lines)
 {
@@ -236,8 +237,9 @@ TEST(RTSP, IgnoreLeading)
 
 TEST(RTSP, Setup)
 {
+    RTP_Engine rtp(6010, 6011);
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -257,14 +259,21 @@ TEST(RTSP, Setup)
     // check the state transition
     EXPECT_EQ(RTSP_Session::READY, session->get_state());
 
-    printf("%s", socket.get_buff());
+    EXPECT_STREQ(""
+        "RTSP/1.0 200 OK\r\n"
+        "CSeq: 0\r\n"
+        "Transport: RTP/AVP;unicast;server_port=6010-6011;session=12345\r\n"
+        "Session: 12345\r\n"
+        "\r\n",  socket.get_buff());
+
     delete session;
 }
 
 TEST(RTSP, SetupComplex)
 {
+    RTP_Engine rtp(6000, 6001);
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -290,8 +299,9 @@ TEST(RTSP, SetupComplex)
 
 TEST(RTSP, SetupComma)
 {
+    RTP_Engine rtp(6000, 6001);
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -350,8 +360,9 @@ TEST(RTSP, Options)
 
 TEST(RTSP, Play)
 {
+    RTP_Engine rtp(6000, 6001);
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
