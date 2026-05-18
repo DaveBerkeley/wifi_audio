@@ -13,6 +13,7 @@ enum RTSP_ErrorCodes
     E_Parameter_Not_Understood = 451,
     E_Not_Acceptable = 406,
     E_Method_Not_Valid_in_This_State = 455,
+    E_Unsupported_Transport = 461, 
     E_Not_Implemented = 501,
     E_Service_Unavailable = 503,
     E_Version_Not_Supported = 505,

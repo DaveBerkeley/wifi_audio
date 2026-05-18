@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <errno.h>
 
 #include "panglos/debug.h"
 
@@ -22,9 +23,6 @@ SocketOut::SocketOut(panglos::Socket *s)
 int SocketOut::tx(const char* data, int n)
 {
     ASSERT(socket);
-    //printf("%.*s", n, data);
-    //UNUSED(data);
-    //return n;
     return socket->send((const uint8_t*) data, n);
 }
 
@@ -47,7 +45,8 @@ RTSP_Handler::RTSP_Handler(RTP_Engine *_rtp, panglos::Socket *s, const char *ip,
     socket(s),
     buff(0),
     out(0),
-    fmt(0)
+    fmt(0),
+    rtp_client(0)
 {
     const int sz = 1024;
     buff = new char[sz];
@@ -60,6 +59,8 @@ RTSP_Handler::~RTSP_Handler()
     delete fmt;
     delete out;
     delete[] buff;
+    rtp->remove(rtp_client);
+    delete rtp_client;
 }
 
 void RTSP_Handler::set_socket(Socket *s)
@@ -85,23 +86,27 @@ void RTSP_Handler::flush()
     out->reset();
 }
 
-int RTSP_Handler::describe(const char *uri, RtspHeader *hdrs)
-{
-    UNUSED(uri);
+    /*
+     *  Command handlers : send response
+     */
 
+int RTSP_Handler::describe(RtspHeader *hdrs)
+{
     // SDP payload
     const char *sdp_fmt = 
-    "v=0\r\n" // protocol version
-    "o=- %d %d IN IP4 %s\r\n"
-    "s=Audio Stream\r\n"
-    "c=IN IP4 0.0.0.0\r\n" // connection data - fixed during SETUP phase
-    "t=0 0\r\n" // timing 
-    "m=audio 0 RTP/AVP 96\r\n" // media announcement : 96 = dynamic payload
-    "a=rtpmap:96 L16/48000/2\r\n" // map the payload type
-    ;
+        "v=0\r\n" // protocol version
+        "o=- %d %d IN IP4 %s\r\n"
+        "s=Audio Stream\r\n"
+        "c=IN IP4 0.0.0.0\r\n" // connection data - fixed during SETUP phase
+        "t=0 0\r\n" // timing 
+        "m=audio 0 RTP/AVP %d\r\n" // media announcement : 96 = dynamic payload
+        "a=rtpmap:%d L16/48000/2\r\n" // map the payload type
+        ;
 
+    ASSERT(rtp);
     char buff[1024];
-    snprintf(buff, sizeof(buff), sdp_fmt, session_id, session_version, ip_addr);
+    int pt = rtp->get_payload_type();
+    snprintf(buff, sizeof(buff), sdp_fmt, session_id, session_version, ip_addr, pt, pt);
 
     int code = E_OK;
     ASSERT(fmt);
@@ -116,10 +121,8 @@ int RTSP_Handler::describe(const char *uri, RtspHeader *hdrs)
     return code;
 }
 
-int RTSP_Handler::options(const char *uri, RtspHeader *hdrs)
+int RTSP_Handler::options(RtspHeader *hdrs)
 {
-    UNUSED(uri);
-
     char buff[1024];
 
     char *s = buff;
@@ -144,9 +147,57 @@ int RTSP_Handler::options(const char *uri, RtspHeader *hdrs)
     return code;
 }
 
-int RTSP_Handler::setup(const char *uri, RtspHeader *hdrs)
+char *RTSP_Handler::get_ip(panglos::Socket *)
 {
-    UNUSED(uri);
+    int fd = socket->get_fd();
+
+    if (fd <= 0)
+    {
+        const char *ip = "1.2.3.4";
+        PO_DEBUG("simulated ip=%s", ip);
+        return strdup(ip);
+    }
+
+    // We have a real socket : not a simulation
+    struct sockaddr_in addr;
+    memset(& addr, 0, sizeof(addr));
+    socklen_t len = sizeof(addr);
+    int err = getpeername(fd, (struct sockaddr*) & addr, & len);
+    if (err < 0)
+    {
+        PO_ERROR("getpeername() err=%d '%s'", errno, strerror(errno));
+        return 0;
+    }
+
+    char ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, & addr.sin_addr, ip, sizeof(ip));
+    PO_DEBUG("ip=%s", ip);
+    return strdup(ip);
+}
+
+int RTSP_Handler::setup(RtspHeader *hdrs)
+{
+    // Check for a usable transport
+    RtspHeader::Transport *transport = 0;
+    for (int i = 0; i < RtspHeader::MAX_TRANSPORTS; i++)
+    {
+        RtspHeader::Transport *t = & hdrs->transport[i];
+        if (!t->unicast)                    continue;
+        if (!t->rtp)                        continue;
+        if (strcmp("PLAY", t->mode))        continue;
+        if (strcmp("UDP", t->transport))    continue;
+        if (t->client_port[0] == 0)         continue;
+        if (t->client_port[1] == 0)         continue;
+        //PO_DEBUG("found valid transport");
+        transport = t;
+        break;
+    }
+
+    if (!transport)
+    {
+        PO_ERROR("no supported transport");
+        return send_error(hdrs, E_Unsupported_Transport);
+    }
 
     int code = E_OK;
     ASSERT(fmt);
@@ -161,12 +212,37 @@ int RTSP_Handler::setup(const char *uri, RtspHeader *hdrs)
     fmt->printf("Session: %d\r\n", session_id);
     fmt->printf("\r\n");
     flush();
+
+    // create the client
+    char port[16];
+    snprintf(port, sizeof(port), "%d", rtp_port);
+    PO_DEBUG("ip=%s:%s", ip_addr, port);
+    // server socket will bind() to the local ip,port
+    panglos::Socket *client_socket = panglos::Socket::open_udp(ip_addr, port, panglos::Socket::SERVER);
+
+    snprintf(port, sizeof(port), "%d", transport->client_port[0]);
+    char *ip = get_ip(socket);
+    PO_DEBUG("ip=%s:%s", ip, port);
+    client_socket->connect(ip, port);
+    free(ip);
+
+    if (rtp_client)
+    {
+        PO_ERROR("existing rtp client! %p", rtp_client);
+        rtp->remove(rtp_client);
+    }
+    rtp_client = new RTP_Client(client_socket);
+
     return code;
 }
 
-int RTSP_Handler::play(const char *uri, RtspHeader *hdrs)
+int RTSP_Handler::play(RtspHeader *hdrs)
 {
-    UNUSED(uri);
+    if (!rtp_client)
+    {
+        // ERROR STATE
+        ASSERT(0);
+    }
 
     int code = E_OK;
     ASSERT(fmt);
@@ -178,6 +254,10 @@ int RTSP_Handler::play(const char *uri, RtspHeader *hdrs)
         ip_addr);
     fmt->printf("\r\n");
     flush();
+
+    ASSERT(rtp);
+    rtp->play(rtp_client);
+
     return code;
 }
 
@@ -209,23 +289,19 @@ int RTSP_Handler::command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, in
         case C_DESCRIBE : 
         {
             if (!hdrs->accept_sdp) return send_error(hdrs, E_Unsupported_Media_Type);
-            return describe(uri, hdrs);
-            break;
+            return describe(hdrs);
         }
         case C_OPTIONS :
         {
-            return options(uri, hdrs);
-            break;
+            return options(hdrs);
         }
         case C_SETUP : 
         {
-            return setup(uri, hdrs);
-            break;
+            return setup(hdrs);
         }
         case C_PLAY : 
         {
-            return play(uri, hdrs);
-            break;
+            return play(hdrs);
         }
         default : ASSERT(0);
     }

@@ -5,6 +5,7 @@
 #include "panglos/io.h"
 
 #include "rtsp.h"
+#include "rtp.h"
 
 class RTP_Engine;
 
@@ -42,15 +43,18 @@ class RTSP_Handler : public RTSP_Session::Handler
     char *buff;
     panglos::CharOut *out;
     panglos::FmtOut *fmt;
+    RTP_Client *rtp_client;
 
     // command responses
-    int describe(const char *uri, RtspHeader *hdrs);
-    int options(const char *uri, RtspHeader *hdrs);
-    int setup(const char *uri, RtspHeader *hdrs);
-    int play(const char *uri, RtspHeader *hdrs);
+    int describe(RtspHeader *hdrs);
+    int options(RtspHeader *hdrs);
+    int setup(RtspHeader *hdrs);
+    int play(RtspHeader *hdrs);
 
     int send_error(RtspHeader *hdrs, int error_code);
     void flush();
+
+    char *get_ip(panglos::Socket *);
 
 public:
     RTSP_Handler(RTP_Engine *rtp, panglos::Socket *s, const char *ip, const char *port, int sid);

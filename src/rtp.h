@@ -66,14 +66,14 @@ struct RTP_Header
 class RTP_Client
 {
     int rtp_port;
-    int rtcp_port;
     RTP_Client *next;
+
+    panglos::Socket *socket;
 public:
-    RTP_Client();
+    RTP_Client(panglos::Socket *s);
     ~RTP_Client();
 
-    void set_client_ports(int a, int b);
-    panglos::Socket *socket();
+    panglos::Socket *get_socket() { return socket; }
 
     static RTP_Client **get_next(RTP_Client *item) { return & item->next; }
 };
@@ -88,14 +88,18 @@ class RTP_Engine
     int rtcp_port;
     struct RTP_Header *packet;
     panglos::List<RTP_Client*> playing;
+    panglos::Mutex *mutex;
 
 public:
     RTP_Engine(int rtp_port, int rtcp_port);
+    ~RTP_Engine();
 
     void get_server_ports(int *a, int *b);
+    int get_payload_type();
 
     void play(RTP_Client *);
     void pause(RTP_Client *);
+    void remove(RTP_Client *);
 };
 
 //  FIN

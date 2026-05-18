@@ -95,8 +95,9 @@ const int sid = 12345;
 
 TEST(RTSP, Describe)
 {
+    RTP_Engine rtp(6000, 6001);
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -210,8 +211,9 @@ TEST(RTSP, BadCommand)
 
 TEST(RTSP, IgnoreLeading)
 {
+    RTP_Engine rtp(6000, 6001);
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -307,7 +309,10 @@ TEST(RTSP, SetupComma)
 
     const char* setup[] = {
         "SETUP rtsp://1.2.3.4:1234/stream RTSP/1.0",
-        "Transport: RTP/AVP;unicast;src_addr=192.168.1.1,224.0.0.1;dest_addr=224.0.0.1,192.168.1.2",
+        "Transport: RTP/AVP;unicast;"
+            "client_port=1-2;"
+            "src_addr=192.168.1.1,224.0.0.1;"
+            "dest_addr=224.0.0.1,192.168.1.2",
         "",
         0,
     };
@@ -369,7 +374,10 @@ TEST(RTSP, Play)
     const char* setup[] = {
         "SETUP rtsp://1.2.3.4:1234/stream RTSP/1.0",
         "CSeq: 1233",
-        "Transport: RTP/AVP;unicast;src_addr=192.168.1.1,224.0.0.1;dest_addr=224.0.0.1,192.168.1.2",
+        "Transport: RTP/AVP;unicast;"
+            "client_port=1-2;"
+            "src_addr=192.168.1.1,224.0.0.1;"
+            "dest_addr=224.0.0.1,192.168.1.2",
         "",
         0,
     };

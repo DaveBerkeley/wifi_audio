@@ -138,7 +138,7 @@ LUT response_lut[] = {
     {   "arameter Is Read-Only", 458 },
     {   "Aggregate Operation Not Allowed", 459 },
     {   "Only Aggregate Operation Allowed", 460 },
-    {   "Unsupported Transport", 461 },
+    {   "Unsupported Transport", E_Unsupported_Transport },
     {   "Destination Unreachable", 462 },
     {   "Destination Prohibited", 463 },
     {   "Data Transport Not Ready Yet", 464 },
