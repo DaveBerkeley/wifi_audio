@@ -1,5 +1,5 @@
 
-#include <gtest/gtest.h>
+#include <stddef.h>
 
 #include "panglos/debug.h"
 #include "panglos/thread.h"
@@ -12,6 +12,8 @@ using namespace panglos;
 #include "rtsp_server.h"
 #include "rtp.h"
 
+#include "server.h"
+
 struct Params {
     RTP_Engine *rtp;
     bool dead;
@@ -19,6 +21,7 @@ struct Params {
 
 static void audio_gen(void *arg)
 {
+    PO_DEBUG("");
     ASSERT(arg);
     struct Params *params = (struct Params *) arg;
 
@@ -34,6 +37,7 @@ static void audio_gen(void *arg)
 
     memcpy(params->rtp->rx_buff(), samples, params->rtp->rx_size());
 
+    PO_DEBUG("");
     while (!params->dead)
     {
         Time::msleep(40);
@@ -58,22 +62,26 @@ public:
     }
 };
 
-TEST(RtspServer, Test)
+static void server(void *)
 {
-    RTP_Engine rtp(6000, 6001);
+    PO_DEBUG("");
+    RTP_Engine *rtp = new RTP_Engine(6000, 6001);
 
     Thread *thread = Thread::create("audio");
-    struct Params params { .rtp = & rtp, .dead = false };
+    struct Params params { .rtp = rtp, .dead = false };
     thread->start(audio_gen, & params);
 
     // blocking call to run server
     SID sid;
     const char *ip = "0.0.0.0"; // all interfaces
-    rtsp_server(ip, "8554", & rtp, & sid);
+    rtsp_server(ip, "8554", rtp, & sid);
+}
 
-    params.dead = true;
-    thread->join();
-    delete thread;
+void run_server()
+{
+    PO_DEBUG("");
+    Thread *thread = Thread::create("server");
+    thread->start(server, 0);
 }
 
 //  FIN

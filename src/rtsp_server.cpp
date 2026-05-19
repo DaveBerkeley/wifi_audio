@@ -110,9 +110,10 @@ int RTSP_Handler::describe(RtspHeader *hdrs)
         ;
 
     ASSERT(rtp);
-    char buff[1024];
+    size_t sz = 1024;
+    char *buff = (char*) malloc(sz);
     int pt = rtp->get_payload_type();
-    snprintf(buff, sizeof(buff), sdp_fmt, session_id, session_version, ip_addr, pt, pt);
+    snprintf(buff, sz, sdp_fmt, session_id, session_version, ip_addr, pt, pt);
 
     int code = E_OK;
     ASSERT(fmt);
@@ -122,33 +123,29 @@ int RTSP_Handler::describe(RtspHeader *hdrs)
     fmt->printf("Content-Type: application/sdp\r\n");
     fmt->printf("Content-Length: %ld\r\n", strlen(buff));
     fmt->printf("\r\n");
-    fmt->printf("%s", buff);
+    for (char *s = buff; *s; s++)
+        fmt->tx(*s);
     flush();
+    free(buff);
     return code;
 }
 
 int RTSP_Handler::options(RtspHeader *hdrs)
 {
-    char buff[1024];
-
-    char *s = buff;
-    size_t sz = sizeof(buff);
-    bool first = true;
-    for (const LUT *_lut = cmd_lut; _lut->text; _lut++)
-    {
-        snprintf(s, sz, "%s%s", first ? "" : ", ", _lut->text);
-        first = false;
-        s += strlen(s);
-        sz = sizeof(buff) - strlen(buff);
-    }
-
     int code = E_OK;
     ASSERT(fmt);
     PO_DEBUG("%d %s", code, lut(response_lut, code));
     fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
     fmt->printf("CSeq: %d\r\n", hdrs->cseq);
-    fmt->printf("Public: %s\r\n", buff);
-    fmt->printf("\r\n");
+    // Print all the supported commands, with ',' separators
+    fmt->printf("Public: ");
+    const char *sep = "";
+    for (const LUT *_lut = cmd_lut; _lut->text; _lut++)
+    {
+        fmt->printf("%s%s", sep, _lut->text);
+        sep = ", ";
+    }
+    fmt->printf("\r\n\r\n");
     flush();
     return code;
 }
@@ -318,7 +315,7 @@ int RTSP_Handler::send_error(RtspHeader *hdrs, int error_code)
 
 int RTSP_Handler::command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, int error_code)
 {
-    PO_DEBUG("cmd=%s uri=%s err=%d", lut(cmd_lut, cmd), uri, error_code);
+    PO_DEBUG("%s %s %d", lut(cmd_lut, cmd), uri, error_code);
 
     if (error_code != E_OK)
     {
@@ -363,6 +360,28 @@ int RTSP_Handler::command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, in
      *
      */
 
+#if 0
+static void dump(uint8_t *buff, int sz)
+{
+    int addr = 0;
+    while (sz)
+    {
+        printf("%04x  ", addr);
+        int block = (sz > 16) ? 16 : sz;
+        for (int i = 0; i < block; i++)
+        {
+            printf("%s %02x", (i == 8) ? " " : "", *buff++);
+        }
+        printf("\n");
+        sz -= block;
+        addr += sz;
+    }
+    fflush(stdout);
+}
+#else
+#define dump(a, b)
+#endif
+
 class RtspClient : public Client
 {
     RTP_Engine *rtp;
@@ -387,7 +406,7 @@ class RtspClient : public Client
         while (session->get_state() != RTSP_Session::DEAD)
         {
             int size = sock->recv((uint8_t*) & buff[idx], sz - idx);
-            PO_DEBUG("size=%d idx=%d", size, idx);
+            PO_DEBUG("size=%d idx=%d sum=%d", size, idx, size + idx);
             if (size <= 0) break;
 
             // check for complete message
@@ -395,6 +414,7 @@ class RtspClient : public Client
             if (!block)
             {
                 idx += size;
+                dump((uint8_t*) buff, idx);
                 continue;
             }
 
@@ -404,16 +424,22 @@ class RtspClient : public Client
             size_t end = 0;
             if (content)
             {
-                // TODO:
+                // TODO: need to parse the Content-Length and wait for the whole message
                 ASSERT(0);
             }
             else
             {
+                // skip the trailing "\r\n\r\n"
                 end = (block + 4) - buff;
             }
 
             ASSERT(end);
+            dump((uint8_t*) buff, idx);
+            PO_DEBUG("process size=%ld", end);
             session->process(buff, end);
+
+            // Need to copy any trailing buffer data to the start of the buffer
+            idx = 0;
         }
 
         handler->terminate();
