@@ -9,7 +9,14 @@
 
 class RTP_Engine;
 
-void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp);
+class SidGenerator 
+{
+public:
+    virtual ~SidGenerator() { }
+    virtual uint32_t generate() = 0;
+};
+
+void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, SidGenerator *gen=0);
 
     /*
      *
@@ -47,9 +54,12 @@ class RTSP_Handler : public RTSP_Session::Handler
 
     // command responses
     int describe(RtspHeader *hdrs);
+    int common(RtspHeader *hdrs);
     int options(RtspHeader *hdrs);
     int setup(RtspHeader *hdrs);
     int play(RtspHeader *hdrs);
+    int pause(RtspHeader *hdrs);
+    int teardown(RtspHeader *hdrs);
 
     int send_error(RtspHeader *hdrs, int error_code);
     void flush();

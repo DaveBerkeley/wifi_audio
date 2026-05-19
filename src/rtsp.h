@@ -89,6 +89,7 @@ public:
         INIT,
         READY,
         PLAY,
+        DEAD,
     };
 
     class Handler

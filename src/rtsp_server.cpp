@@ -6,6 +6,8 @@
 
 #include "panglos/debug.h"
 
+#include "sockets.h"
+
 #include "rtsp_server.h"
 #include "rtp.h"
 
@@ -175,9 +177,28 @@ char *RTSP_Handler::get_ip(panglos::Socket *)
     return strdup(ip);
 }
 
+    /*
+     *
+     */
+
+int RTSP_Handler::common(RtspHeader *hdrs)
+{
+    int code = E_OK;
+    ASSERT(fmt);
+    PO_DEBUG("%d %s", code, lut(response_lut, code));
+    fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
+    fmt->printf("CSeq: %d\r\n", hdrs->cseq);
+    fmt->printf("Session: %d\r\n", session_id);
+    return code;
+}
+
+    /*
+     *
+     */
+
 int RTSP_Handler::setup(RtspHeader *hdrs)
 {
-    // Check for a usable transport
+    // search for a usable transport
     RtspHeader::Transport *transport = 0;
     for (int i = 0; i < RtspHeader::MAX_TRANSPORTS; i++)
     {
@@ -199,17 +220,12 @@ int RTSP_Handler::setup(RtspHeader *hdrs)
         return send_error(hdrs, E_Unsupported_Transport);
     }
 
-    int code = E_OK;
-    ASSERT(fmt);
-    PO_DEBUG("%d %s", code, lut(response_lut, code));
-    fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
-    fmt->printf("CSeq: %d\r\n", hdrs->cseq);
+    int code = common(hdrs);
     int rtp_port = 6000, rtcp_port= 6001;
     ASSERT(rtp);
     rtp->get_server_ports(& rtp_port, & rtcp_port);
     fmt->printf("Transport: RTP/AVP;unicast;server_port=%d-%d;session=%d\r\n", 
         rtp_port, rtcp_port, session_id);
-    fmt->printf("Session: %d\r\n", session_id);
     fmt->printf("\r\n");
     flush();
 
@@ -244,14 +260,8 @@ int RTSP_Handler::play(RtspHeader *hdrs)
         ASSERT(0);
     }
 
-    int code = E_OK;
-    ASSERT(fmt);
-    PO_DEBUG("%d %s", code, lut(response_lut, code));
-    fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
-    fmt->printf("CSeq: %d\r\n", hdrs->cseq);
-    fmt->printf("Session: %d\r\n", hdrs->session_id);
-    fmt->printf("RTP-Info: url=rtsp://%s/media.mp4/trackID=0;seq=1;rtptime=0\r\n",
-        ip_addr);
+    int code = common(hdrs);
+    fmt->printf("RTP-Info: url=rtsp://%s/media/trackID=0;seq=1;rtptime=0\r\n", ip_addr);
     fmt->printf("\r\n");
     flush();
 
@@ -260,6 +270,34 @@ int RTSP_Handler::play(RtspHeader *hdrs)
 
     return code;
 }
+
+int RTSP_Handler::teardown(RtspHeader *hdrs)
+{
+    int code = common(hdrs);
+    fmt->printf("\r\n");
+    flush();
+
+    ASSERT(rtp);
+    rtp->remove(rtp_client);
+
+    return code;
+}
+
+int RTSP_Handler::pause(RtspHeader *hdrs)
+{
+    int code = common(hdrs);
+    fmt->printf("\r\n");
+    flush();
+
+    ASSERT(rtp);
+    rtp->remove(rtp_client);
+
+    return code;
+}
+
+    /*
+     *
+     */
 
 int RTSP_Handler::send_error(RtspHeader *hdrs, int error_code)
 {
@@ -303,6 +341,14 @@ int RTSP_Handler::command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, in
         {
             return play(hdrs);
         }
+        case C_PAUSE : 
+        {
+            return pause(hdrs);
+        }
+        case C_TEARDOWN : 
+        {
+            return teardown(hdrs);
+        }
         default : ASSERT(0);
     }
 
@@ -318,7 +364,6 @@ class RtspClient : public Client
     RTP_Engine *rtp;
     RTSP_Handler *handler;
     RTSP_Session *session;
-    bool dead;
     char *buff;
     int sz;
     int idx;
@@ -335,8 +380,7 @@ class RtspClient : public Client
         handler->set_socket(sock);
 
         // call in a loop : 
-        // session->process(data, sz);
-        while (!dead)
+        while (session->get_state() != RTSP_Session::DEAD)
         {
             int size = sock->recv((uint8_t*) & buff[idx], sz - idx);
             PO_DEBUG("size=%d idx=%d", size, idx);
@@ -372,12 +416,11 @@ class RtspClient : public Client
     }
 
 public:
-    RtspClient(SocketServer *ss, RTP_Engine *r, const char *ip, const char *port)
+    RtspClient(SocketServer *ss, RTP_Engine *r, const char *ip, const char *port, uint32_t sid)
     :   Client(ss),
         rtp(r),
         handler(0),
         session(0),
-        dead(false),
         buff(0),
         sz(2048),
         idx(0)
@@ -385,8 +428,7 @@ public:
         buff = new char[sz];
         memset(buff, 0, sz);
 
-        int session_id = 12345;
-        handler = new RTSP_Handler(rtp, sock, ip, port, session_id);
+        handler = new RTSP_Handler(rtp, sock, ip, port, sid);
         session = RTSP_Session::create(handler);
     }
 
@@ -407,16 +449,19 @@ class Factory : public Client::Factory
     RTP_Engine *rtp;
     const char *ip;
     const char *port;
+    SidGenerator *sid_gen;
 
     virtual Client *create_client(SocketServer *ss) override
     {
-        return new RtspClient(ss, rtp, ip, port);
+        uint32_t sid = sid_gen ? sid_gen->generate() : 12345;
+        return new RtspClient(ss, rtp, ip, port, sid);
     }
 public:
-    Factory(RTP_Engine *r, const char *_ip, const char *_port)
+    Factory(RTP_Engine *r, const char *_ip, const char *_port, SidGenerator *gen=0)
     :   rtp(r),
         ip(strdup(_ip)),
-        port(strdup(_port))
+        port(strdup(_port)),
+        sid_gen(gen)
     {
     }
 
@@ -431,7 +476,7 @@ public:
      *
      */
 
-void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp)
+void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, SidGenerator *gen)
 {
     Socket *socket = Socket::open_tcpip(ip, port, Socket::SERVER);
     if (!socket)
@@ -439,7 +484,7 @@ void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp)
         PO_ERROR("unable to open socket(%s,%s)", ip, port);
         return;
     }
-    Factory factory(rtp, ip, port);
+    Factory factory(rtp, ip, port, gen);
     // blocking call to socket server
     run_socket_server(socket, & factory);
     delete socket;

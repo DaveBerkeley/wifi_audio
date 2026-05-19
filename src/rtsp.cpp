@@ -524,12 +524,13 @@ public:
 
         switch(rtsp_cmd)
         {
-            case C_PLAY : // fall thru
-            case C_DESCRIBE : // fall thru
-            case C_SETUP : // fall thru
+            // valid commands
+            case C_PAUSE :
+            case C_TEARDOWN :
+            case C_PLAY :
+            case C_DESCRIBE :
+            case C_SETUP :
             case C_OPTIONS : return parse(& lp, uri, rtsp_cmd, code);
-            case C_PAUSE : // fall thru TODO
-            case C_TEARDOWN : // fall thru TODO
             default : ASSERT(0); break;
         }
 
@@ -561,6 +562,7 @@ class Session : public RTSP_Session
             {   "INIT", INIT,   },
             {   "READY", READY,   },
             {   "PLAY", PLAY,   },
+            {   "DEAD", DEAD,   },
             { 0, 0 },
         };
 
@@ -602,8 +604,8 @@ class Session : public RTSP_Session
 
         if (cmd == C_TEARDOWN)
         {
-            // TODO : terminate the state machine
-            ASSERT(0);
+            set_state(DEAD);
+            return C_UNKNOWN;
         }
 
         switch (state)
@@ -622,6 +624,10 @@ class Session : public RTSP_Session
             {
                 if (cmd == C_PAUSE) set_state(READY);
                 break;
+            }
+            case DEAD :
+            {
+                return C_UNKNOWN;
             }
             default : ASSERT(0);
         }

@@ -264,8 +264,8 @@ TEST(RTSP, Setup)
     EXPECT_STREQ(""
         "RTSP/1.0 200 OK\r\n"
         "CSeq: 0\r\n"
-        "Transport: RTP/AVP;unicast;server_port=6010-6011;session=12345\r\n"
         "Session: 12345\r\n"
+        "Transport: RTP/AVP;unicast;server_port=6010-6011;session=12345\r\n"
         "\r\n",  socket.get_buff());
 
     delete session;
@@ -396,7 +396,7 @@ TEST(RTSP, Play)
     const char* play[] = {
         "PLAY rtsp://1.2.3.4:1234/stream RTSP/1.0",
         "CSeq: 1234",
-        "Session: 3456",
+        "Session: 12345",
         "",
         0,
     };
@@ -412,8 +412,8 @@ TEST(RTSP, Play)
     EXPECT_STREQ(
         "RTSP/1.0 200 OK\r\n"
         "CSeq: 1234\r\n"
-        "Session: 3456\r\n"
-        "RTP-Info: url=rtsp://127.0.0.1/media.mp4/trackID=0;seq=1;rtptime=0\r\n"
+        "Session: 12345\r\n"
+        "RTP-Info: url=rtsp://127.0.0.1/media/trackID=0;seq=1;rtptime=0\r\n"
         "\r\n",
         socket.get_buff());
 
