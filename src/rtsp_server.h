@@ -73,6 +73,7 @@ public:
     virtual RtspCommand error(int code) override;
     virtual int get_last_error() override;
     virtual int command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, int error_code) override;
+    virtual void terminate() override;
 
     void set_socket(panglos::Socket *s);
 };

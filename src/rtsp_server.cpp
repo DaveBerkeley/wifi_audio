@@ -61,8 +61,12 @@ RTSP_Handler::~RTSP_Handler()
     delete fmt;
     delete out;
     delete[] buff;
-    rtp->remove(rtp_client);
     delete rtp_client;
+}
+
+void RTSP_Handler::terminate()
+{
+    rtp->remove(rtp_client);
 }
 
 void RTSP_Handler::set_socket(Socket *s)
@@ -412,6 +416,7 @@ class RtspClient : public Client
             session->process(buff, end);
         }
 
+        handler->terminate();
         PO_DEBUG("DONE");
     }
 
