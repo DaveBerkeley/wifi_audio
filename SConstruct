@@ -3,6 +3,7 @@ files = [
     'src/rtsp.cpp',
     'src/rtsp_server.cpp',
     'src/rtp.cpp',
+    'src/utils.cpp',
 
     'test/main.cpp',
     'test/storage.cpp',

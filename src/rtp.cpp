@@ -35,7 +35,6 @@ int RTP_Client::send(const uint8_t *data, size_t len)
 RTP_Engine::RTP_Engine(int rtp, int rtcp)
 :   rtp_port(rtp),
     rtcp_port(rtcp),
-    packet(0),
     playing(RTP_Client::get_next),
     mutex(0),
     packet_seq(1),
@@ -45,29 +44,35 @@ RTP_Engine::RTP_Engine(int rtp, int rtcp)
 
     // initialise the RTP packet buffer
     // TODO : assumes zero CSRC and Extension blocks in header
-    size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * num_samples);
-    uint8_t *data = new uint8_t[packet_size];
-    memset(data, 0, packet_size);
-    packet = (RTP_Header*) data;
+    for (int idx = 0; idx < 2; idx++)
+    {
+        size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * num_samples);
+        uint8_t *data = new uint8_t[packet_size];
+        memset(data, 0, packet_size);
+        RTP_Header *packet = (RTP_Header*) data;
 
-    packet->set_version(2);
-    packet->set_payload(get_payload_type());
-    packet->set_seq(packet_seq++);
-    packet->set_timestamp(timestamp);
+        packet->set_version(2);
+        packet->set_payload(get_payload_type());
+        packets[idx] = packet;
+    }
 }
 
 RTP_Engine::~RTP_Engine()
 {
     delete mutex;
-    delete[] packet;
+    for (int idx = 0; idx < 2; idx++)
+    {
+        delete[] packets[idx];
+    }
 }
 
-int16_t *RTP_Engine::rx_buff()
+int16_t *RTP_Engine::rx_buff(int idx)
 {
-    return packet->get_audio();
+    ASSERT(idx < 2);
+    return packets[idx]->get_audio();
 }
 
-size_t RTP_Engine::rx_size()
+size_t RTP_Engine::rx_bytes(int)
 {
     return num_samples * 2 * sizeof(uint16_t);
 }
@@ -117,14 +122,16 @@ static int send_packet(RTP_Client *client, void *arg)
     return 0;
 }
 
-int RTP_Engine::send(int samples)
+int RTP_Engine::send(int idx, size_t samples)
 {
     if (samples > num_samples) return false;
     if (samples <= 0) return false;
     // increment the seq id
+    ASSERT(idx < 2);
+    RTP_Header *packet = packets[idx];
     packet->set_seq(packet_seq++);
     packet->set_timestamp(timestamp);
-    timestamp += samples;
+    timestamp += (int32_t) samples;
     // send the packet to all the clients in PLAY state
     size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * samples);
     struct Buffer params = { .data = (uint8_t*) packet, .size = packet_size };
@@ -176,36 +183,6 @@ RTP_Client* RTP_Engine::get_client(int idx)
     };
     playing.visit(find_client, & counter, mutex);
     return counter.client;
-}
-
-    /*
-     *  Utilities
-     */
-
-#include <math.h>
-
-#include "sockets.h"
-
-void make_1kHz(RTP_Engine *rtp, int gain)
-{
-    PO_DEBUG("");
-
-    int n_samples = rtp->num_samples * 2;
-    uint16_t *samples = new uint16_t[n_samples];
-    for (uint16_t i = 0; i < rtp->num_samples; i++)
-    {
-        // generate 1kHz sine wave. 48kHz sample rate, 48 samples per cycle
-        const int iphase = i % 48;
-        double phase = (iphase * M_PI * 2) / 48;
-        const double sine = sin(phase);
-        int16_t sample = (int16_t)(gain * sine);
-        sample = ntohs(sample);
-        samples[i*2] = sample;
-        samples[(i*2)+1] = sample;
-    }
-
-    memcpy(rtp->rx_buff(), samples, rtp->rx_size());
-    delete[] samples;
 }
 
 //  FIN

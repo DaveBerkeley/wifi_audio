@@ -98,14 +98,14 @@ class RTP_Engine
 {
     int rtp_port;
     int rtcp_port;
-    struct RTP_Header *packet;
+    struct RTP_Header *packets[2];
     panglos::List<RTP_Client*> playing;
     panglos::Mutex *mutex;
     uint16_t packet_seq;
     uint32_t timestamp;
 
 public:
-    const int num_samples = 480;
+    const size_t num_samples = 480;
 
     RTP_Engine(int rtp_port, int rtcp_port);
     ~RTP_Engine();
@@ -116,10 +116,10 @@ public:
     void play(RTP_Client *);
     void remove(RTP_Client *);
 
-    int send(int samples);
+    int send(int idx, size_t samples);
 
-    int16_t *rx_buff();
-    size_t rx_size();
+    int16_t *rx_buff(int idx);
+    size_t rx_bytes(int idx);
 
     // Stats
     int get_num_clients();

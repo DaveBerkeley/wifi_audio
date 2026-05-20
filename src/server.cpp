@@ -16,27 +16,8 @@ using namespace panglos;
 #include "rtp.h"
 
 #include "server.h"
-
-struct Params {
-    RTP_Engine *rtp;
-    bool dead;
-};
-
-static void audio_gen(void *arg)
-{
-    PO_DEBUG("");
-    ASSERT(arg);
-    struct Params *params = (struct Params *) arg;
-
-    make_1kHz(params->rtp, 0x1000);
-
-    PO_DEBUG("");
-    while (!params->dead)
-    {
-        Time::msleep(10);
-        params->rtp->send(params->rtp->num_samples);
-    }
-}
+#include "i2s.h"
+#include "utils.h"
 
     /*
      *
@@ -74,9 +55,16 @@ static void server(void *arg)
     RTP_Engine *rtp = new RTP_Engine(info->rtp_ports[1], info->rtp_ports[1]);
     Objects::objects->add("rtp", rtp);
 
+    AudioSource *src = (I2S*) Objects::objects->get("i2s");
+    if (!src)
+    {
+        static Test_1kHz_Source test(rtp);
+        src = & test;
+    }
+
     Thread *thread = Thread::create("rtp");
-    struct Params params { .rtp = rtp, .dead = false };
-    thread->start(audio_gen, & params);
+    static struct AudioCopy ac = { .src = src, .dst = rtp };
+    thread->start(run_audio_copy, & ac);
 
     // blocking call to run server
     SID sid;

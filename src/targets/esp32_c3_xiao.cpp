@@ -15,6 +15,7 @@
 #include "board.h"
 
 #include "server.h"
+#include "i2s.h"
 
 using namespace panglos;
 
@@ -45,19 +46,27 @@ static Device _board_devs[] = {
 static bool rtp_init(void *, Event *, Event::Queue *)
 {
     PO_DEBUG("");
-
     run_server();
 
     CLI *cli = (CLI*) Objects::objects->get("cli");
     ASSERT(cli);
     add_rtp_commands(cli);
  
+    //I2S *i2s = (I2S*) Objects::objects->get("i2s");
+    //ASSERT(i2s);
+    
     return false; // INIT handlers must return false so multiple handlers can be run
 }
 
 void board_init()
 {
     PO_DEBUG("");
+
+#if 1
+    I2S *i2s = I2S::create(GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6);
+    ASSERT(i2s);
+    Objects::objects->add("i2s", i2s);
+#endif
 
     if (Objects::objects->get("net"))
     {
