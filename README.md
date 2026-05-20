@@ -2,6 +2,8 @@
 RTSP/RTP Streaming of I2S audio for the ESP32.
 ----
 
+Still under development ..
+
 Written using my 
 [panglos](https://github.com/DaveBerkeley/panglos)
 framework.
