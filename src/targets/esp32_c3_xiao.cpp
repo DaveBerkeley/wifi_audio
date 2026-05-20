@@ -1,4 +1,6 @@
 
+#include "cli/src/cli.h"
+
 #include "panglos/debug.h"
 
 #include "panglos/esp32/gpio.h"
@@ -11,6 +13,8 @@
 #include "panglos/app/cli_server.h"
 
 #include "board.h"
+
+#include "server.h"
 
 using namespace panglos;
 
@@ -38,11 +42,29 @@ static Device _board_devs[] = {
     Device(0, 0, 0, 0, 0),
 };
 
+static bool rtp_init(void *, Event *, Event::Queue *)
+{
+    PO_DEBUG("");
+
+    run_server();
+
+    CLI *cli = (CLI*) Objects::objects->get("cli");
+    ASSERT(cli);
+    add_rtp_commands(cli);
+ 
+    return false; // INIT handlers must return false so multiple handlers can be run
+}
+
 void board_init()
 {
     PO_DEBUG("");
 
-    EventHandler::add_handler(Event::INIT, net_cli_init, 0);    
+    if (Objects::objects->get("net"))
+    {
+        EventHandler::add_handler(Event::INIT, net_cli_init, 0);
+    }
+
+    EventHandler::add_handler(Event::INIT, rtp_init, 0);    
 }
 
 Device *board_devs = _board_devs;

@@ -38,7 +38,7 @@ struct
 RTP_Header
 {
     uint8_t head[12];
-    uint16_t audio[0];
+    int16_t audio[0];
 
     void set_version(uint8_t v)
     {
@@ -46,7 +46,7 @@ RTP_Header
     }
     void set_payload(uint8_t pt)
     {
-        set_u8(& head[1], 0x7f, 0, pt);
+        set_u8(& head[1], pt, 0x7f, 0);
     }
     void set_seq(uint16_t seq)
     {
@@ -60,6 +60,12 @@ RTP_Header
     {
         set_u32(& head[8], ssrc);
     }
+
+    int16_t *get_audio()
+    {
+        // TODO : check CSRC & Extension blocks
+        return & audio[0];
+    }
 };
 
     /*
@@ -68,15 +74,18 @@ RTP_Header
 
 class RTP_Client
 {
-    int rtp_port;
+    panglos::Socket *socket;
+    int num_packets;
     RTP_Client *next;
 
-    panglos::Socket *socket;
 public:
     RTP_Client(panglos::Socket *s);
     ~RTP_Client();
 
+    int send(const uint8_t *data, size_t len);
+    
     panglos::Socket *get_socket() { return socket; }
+    int get_num_packets() { return num_packets; }
 
     static RTP_Client **get_next(RTP_Client *item) { return & item->next; }
 };
@@ -96,7 +105,7 @@ class RTP_Engine
     uint32_t timestamp;
 
 public:
-    const int num_samples = 192;
+    const int num_samples = 480;
 
     RTP_Engine(int rtp_port, int rtcp_port);
     ~RTP_Engine();
@@ -105,13 +114,18 @@ public:
     uint8_t get_payload_type();
 
     void play(RTP_Client *);
-    void pause(RTP_Client *);
     void remove(RTP_Client *);
 
     int send(int samples);
 
-    uint16_t *rx_buff();
+    int16_t *rx_buff();
     size_t rx_size();
+
+    // Stats
+    int get_num_clients();
+    RTP_Client *get_client(int idx);
 };
+
+void make_1kHz(RTP_Engine *rtp, int gain);
 
 //  FIN

@@ -47,8 +47,6 @@
 
 #include "targets/board.h"
 
-#include "server.h"
-
 using namespace panglos;
 
 #define esp_error(err)    ASSERT_ERROR((err) == ESP_OK, "err=%s", lut(panglos::err_lut, (err)));
@@ -217,8 +215,6 @@ static void start_app()
 
     // Define main program execution
     Objects::objects->add("app", (void*) run_cli);
-
-    run_server();
 }
 
     /*

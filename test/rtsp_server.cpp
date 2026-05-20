@@ -22,26 +22,14 @@ static void audio_gen(void *arg)
     ASSERT(arg);
     struct Params *params = (struct Params *) arg;
 
-    int n_samples = params->rtp->num_samples * 2;
-    uint16_t *samples = new uint16_t[n_samples];
-    for (uint16_t i = 0; i < params->rtp->num_samples; i++)
-    {
-        uint16_t sample = (i & 0x4) ? 0x4000 : -0x4000;
-        sample = ntohs(sample);
-        samples[i*2] = sample;
-        samples[(i*2)+1] = sample;
-    }
-
-    memcpy(params->rtp->rx_buff(), samples, params->rtp->rx_size());
+    make_1kHz(params->rtp, 0x1000);
 
     while (!params->dead)
     {
-        Time::msleep(40);
+        Time::msleep(10);
         //PO_DEBUG("");
         params->rtp->send(params->rtp->num_samples);
     }
-
-    delete[] samples;
 }
 
     /*
