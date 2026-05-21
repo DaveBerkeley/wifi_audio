@@ -1,37 +1,26 @@
 
-#include "cli/src/cli.h"
+#include "hal/gpio_types.h"
 
 #include "panglos/debug.h"
+#include "panglos/device.h"
 
 #include "panglos/esp32/gpio.h"
-#include "panglos/device.h"
-#include "panglos/object.h"
-
-#include "panglos/esp32/spi.h"
 #include "panglos/app/devices.h"
-#include "panglos/app/event.h"
-#include "panglos/app/cli_server.h"
-
-#include "board.h"
-
-#include "server.h"
-#include "i2s.h"
 
 using namespace panglos;
 
-#if defined(ESP32C3_XIAO)
+#include "board.h"
 
-#define PMOD_0   GPIO_NUM_6
-#define PMOD_1   GPIO_NUM_5
-#define PMOD_2   GPIO_NUM_4
-#define PMOD_3   GPIO_NUM_3
-#define PMOD_4   GPIO_NUM_7
-#define PMOD_5   GPIO_NUM_10
-#define PMOD_6   GPIO_NUM_20
-#define PMOD_7   GPIO_NUM_21
+#include "esp32/init.h"
+
+#if defined(ESP32C3_XIAO)
 
 // no LED on the xiao board!
 //static const GPIO_DEF led_def = { GPIO_NUM_8, ESP_GPIO::OP, true };
+
+static const GPIO_DEF sck_def = { GPIO_NUM_4, ESP_GPIO::IP };
+static const GPIO_DEF ws_def = { GPIO_NUM_5, ESP_GPIO::IP };
+static const GPIO_DEF sd_def = { GPIO_NUM_6, ESP_GPIO::IP };
 
     /*
      *
@@ -39,41 +28,15 @@ using namespace panglos;
 
 static Device _board_devs[] = {
     //DEV_GPIO("led", 0, & led_def),
-    //DEV_GPIO("spi_cs", 0, & spi_cs_def),
+    DEV_GPIO("sck", 0, & sck_def),
+    DEV_GPIO("ws", 0, & ws_def),
+    DEV_GPIO("sd", 0, & sd_def),
     Device(0, 0, 0, 0, 0),
 };
 
-static bool rtp_init(void *, Event *, Event::Queue *)
-{
-    PO_DEBUG("");
-    run_server();
-
-    CLI *cli = (CLI*) Objects::objects->get("cli");
-    ASSERT(cli);
-    add_rtp_commands(cli);
- 
-    //I2S *i2s = (I2S*) Objects::objects->get("i2s");
-    //ASSERT(i2s);
-    
-    return false; // INIT handlers must return false so multiple handlers can be run
-}
-
 void board_init()
 {
-    PO_DEBUG("");
-
-#if 1
-    I2S *i2s = I2S::create(GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6);
-    ASSERT(i2s);
-    Objects::objects->add("i2s", i2s);
-#endif
-
-    if (Objects::objects->get("net"))
-    {
-        EventHandler::add_handler(Event::INIT, net_cli_init, 0);
-    }
-
-    EventHandler::add_handler(Event::INIT, rtp_init, 0);    
+    //board_init(GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6);
 }
 
 Device *board_devs = _board_devs;

@@ -37,13 +37,6 @@ public:
      *
      */
 
-struct ServerDesc
-{
-    const char *ip;
-    int rtsp_port;
-    int rtp_ports[2];
-};
-
 static void server(void *arg)
 {
     PO_DEBUG("");
@@ -74,16 +67,11 @@ static void server(void *arg)
     rtsp_server(info->ip, port, rtp, & sid);
 }
 
-void run_server()
+void run_server(struct ServerDesc *info)
 {
     PO_DEBUG("");
-    static struct ServerDesc info = {
-        .ip = "0.0.0.0",
-        .rtsp_port = 554,
-        .rtp_ports = { 6000, 6001, },
-    };
     Thread *thread = Thread::create("rtsp");
-    thread->start(server, & info);
+    thread->start(server, info);
 }
 
     /*

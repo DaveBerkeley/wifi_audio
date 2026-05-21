@@ -1,7 +1,14 @@
 
 #pragma once
 
-void run_server();
+struct ServerDesc
+{
+    const char *ip;
+    int rtsp_port;
+    int rtp_ports[2];
+};
+
+void run_server(struct ServerDesc *);
 
 class CLI;
 void add_rtp_commands(CLI *cli);
