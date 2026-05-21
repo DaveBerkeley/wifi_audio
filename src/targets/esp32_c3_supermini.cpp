@@ -13,18 +13,18 @@ using namespace panglos;
 
 #include "esp32/init.h"
 
-#if defined(ESP32C3_XIAO)
+#if defined(ESP32C3_SUPERMINI)
 
 // no LED on the xiao board!
 //static const GPIO_DEF led_def = { GPIO_NUM_8, ESP_GPIO::OP, true };
 
-#define GPIO_TEST
+//#define GPIO_TEST
 
 #if defined(GPIO_TEST)
 #define INPUT ESP_GPIO::IP | ESP_GPIO::PU
 static const GPIO_DEF sck_def = { GPIO_NUM_4, INPUT };
-static const GPIO_DEF ws_def = { GPIO_NUM_5, INPUT };
-static const GPIO_DEF sd_def = { GPIO_NUM_6, INPUT };
+static const GPIO_DEF ws_def = { GPIO_NUM_3, INPUT };
+static const GPIO_DEF sd_def = { GPIO_NUM_2, INPUT };
 #endif
 
     /*
@@ -44,7 +44,7 @@ static Device _board_devs[] = {
 void board_init()
 {
 #if !defined(GPIO_TEST)
-    board_init(GPIO_NUM_4, GPIO_NUM_5, GPIO_NUM_6);
+    board_init(GPIO_NUM_4, GPIO_NUM_3, GPIO_NUM_2);
 #endif
 }
 

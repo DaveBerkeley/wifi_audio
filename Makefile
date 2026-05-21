@@ -1,7 +1,8 @@
 
 PROJECT=AUDIO_TX
 
-TARGET=seeed_xiao_esp32c3
+#TARGET=seeed_xiao_esp32c3
+TARGET=c3_supermini
 
 MODE = run
 #MODE = debug
