@@ -77,7 +77,7 @@ public:
 
     virtual size_t read(void *dest, size_t size) override
     {
-        PO_DEBUG("");
+        //PO_DEBUG("");
         ASSERT(size <= 4092); // Hard limit on DMA buffer size
         // Blocking Read
         size_t bytes_read;
@@ -89,7 +89,6 @@ public:
             PO_ERROR("i2s_channel_read() err=%d %s", err, lut(err_lut, err));
             return 0;
         }
-        ASSERT(0);
         return bytes_read;
     }
 };

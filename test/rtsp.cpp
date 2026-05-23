@@ -95,7 +95,7 @@ const int sid = 12345;
 
 TEST(RTSP, Describe)
 {
-    RTP_Engine rtp(6000, 6001);
+    RTP_Engine rtp(6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
@@ -211,7 +211,7 @@ TEST(RTSP, BadCommand)
 
 TEST(RTSP, IgnoreLeading)
 {
-    RTP_Engine rtp(6000, 6001);
+    RTP_Engine rtp(6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
@@ -239,7 +239,7 @@ TEST(RTSP, IgnoreLeading)
 
 TEST(RTSP, Setup)
 {
-    RTP_Engine rtp(6010, 6011);
+    RTP_Engine rtp(6010, 6011, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
@@ -273,7 +273,7 @@ TEST(RTSP, Setup)
 
 TEST(RTSP, SetupComplex)
 {
-    RTP_Engine rtp(6000, 6001);
+    RTP_Engine rtp(6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
@@ -301,7 +301,7 @@ TEST(RTSP, SetupComplex)
 
 TEST(RTSP, SetupComma)
 {
-    RTP_Engine rtp(6000, 6001);
+    RTP_Engine rtp(6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
@@ -365,7 +365,7 @@ TEST(RTSP, Options)
 
 TEST(RTSP, Play)
 {
-    RTP_Engine rtp(6000, 6001);
+    RTP_Engine rtp(6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);

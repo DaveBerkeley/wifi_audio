@@ -30,7 +30,7 @@ public:
 
 TEST(RtspServer, Test)
 {
-    RTP_Engine rtp(6000, 6001);
+    RTP_Engine rtp(6000, 6001, 2);
 
     Test_1kHz_Source source(& rtp);
 

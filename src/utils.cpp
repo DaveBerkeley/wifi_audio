@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "panglos/debug.h"
+#include "panglos/time.h"
 
     /*
      *  Utilities
@@ -14,17 +15,23 @@
 
 void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *)
 {
-    int idx = 0;
-
     //while (!*dead)
-    while(true)
+    while (true)
     {
+        // get the next block RAM
+        RTP_Engine::Block *block = rtp->get_free();
+        if (!block)
+        {
+            //PO_ERROR("no free blocks!");
+            panglos::Time::msleep(2);
+            continue;
+        }
         // blocking read on source
-        src->read(rtp->rx_buff(idx), rtp->rx_bytes(idx));
+        uint8_t *data = block->packet->get_audio();
+        src->read(data, rtp->rx_bytes());
         // send the RTP data
-        const size_t samples = rtp->rx_bytes(idx) / (2 * sizeof(int16_t));
-        rtp->send(idx, samples);
-        idx = idx ? 0 : 1;
+        block->samples = rtp->rx_bytes() / (2 * sizeof(int16_t));
+        rtp->send(block);
     }
 }
 
@@ -54,11 +61,23 @@ void make_1kHz(RTP_Engine *rtp, int gain)
         samples[(i*2)+1] = sample;
     }
 
-    for (int idx = 0; idx < 2; idx++)
+    // Get all the available blocks
+    RTP_Engine::Blocks blocks(RTP_Engine::Block::get_next);
+
+    while (true)
     {
-        memcpy(rtp->rx_buff(idx), samples, rtp->rx_bytes(idx));
+        RTP_Engine::Block *block = rtp->get_free();
+        if (!block) break;
+        blocks.push(block, 0);
     }
-    delete[] samples;
+
+    while (true)
+    {
+        RTP_Engine::Block *block = blocks.pop(0);
+        if (!block) break;
+        memcpy(block->packet->get_audio(), samples, rtp->rx_bytes());
+        rtp->put_free(block);        
+    }
 }
 
 #include "panglos/time.h"
@@ -67,7 +86,7 @@ size_t Test_1kHz_Source::read(void *dest, size_t bytes)
 {
     // Blocking read
     UNUSED(dest);
-    panglos::Time::msleep(10);
+    panglos::Time::msleep(7);
     return bytes;
 }
 

@@ -45,7 +45,7 @@ static void server(void *arg)
     struct ServerDesc *info = (struct ServerDesc *) arg;
 
     PO_DEBUG("RTP_Engine(%d,%d)", info->rtp_ports[1], info->rtp_ports[1]);
-    RTP_Engine *rtp = new RTP_Engine(info->rtp_ports[1], info->rtp_ports[1]);
+    RTP_Engine *rtp = new RTP_Engine(info->rtp_ports[1], info->rtp_ports[1], 2);
     Objects::objects->add("rtp", rtp);
 
     AudioSource *src = (I2S*) Objects::objects->get("i2s");

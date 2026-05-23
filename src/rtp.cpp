@@ -1,5 +1,6 @@
 
 #include <string.h>
+#include <stdlib.h>
 
 #include "panglos/debug.h"
 #include "panglos/mutex.h"
@@ -19,6 +20,7 @@ RTP_Client::RTP_Client(panglos::Socket *s)
 
 RTP_Client::~RTP_Client()
 {
+    delete socket;
 }
 
 int RTP_Client::send(const uint8_t *data, size_t len)
@@ -32,47 +34,77 @@ int RTP_Client::send(const uint8_t *data, size_t len)
      *
      */
 
-RTP_Engine::RTP_Engine(int rtp, int rtcp)
+class SystemAllocator : public Allocator
+{
+    virtual void *malloc(size_t sz)
+    {
+        return ::malloc(sz);
+    }
+    virtual void free(void *data)
+    {
+        ::free(data);
+    }
+};
+
+static SystemAllocator allocator;
+
+Allocator *Allocator::system()
+{
+    return & allocator;
+}
+
+    /*
+     *
+     */
+
+RTP_Engine::RTP_Engine(int rtp, int rtcp, int num_buffers, Allocator *a)
 :   rtp_port(rtp),
     rtcp_port(rtcp),
+    allocator(a),
     playing(RTP_Client::get_next),
     mutex(0),
     packet_seq(1),
-    timestamp(0)
+    timestamp(0),
+    blocks(Block::get_next)
 {
+    allocator = allocator ? allocator : Allocator::system();
     mutex = panglos::Mutex::create();
 
-    // initialise the RTP packet buffer
     // TODO : assumes zero CSRC and Extension blocks in header
-    for (int idx = 0; idx < 2; idx++)
+    for (int idx = 0; idx < num_buffers; idx++)
     {
         size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * num_samples);
-        uint8_t *data = new uint8_t[packet_size];
+        uint8_t *data = (uint8_t*) allocator->malloc(packet_size);
         memset(data, 0, packet_size);
         RTP_Header *packet = (RTP_Header*) data;
 
+        // initialise each RTP packet
         packet->set_version(2);
         packet->set_payload(get_payload_type());
-        packets[idx] = packet;
+        packet->set_timestamp(0);
+        packet->set_ssrc(0);
+
+        // save to the free list
+        struct Block *block = new struct Block;
+        block->next = 0;
+        block->packet = packet;
+        blocks.push(block, mutex);
     }
 }
 
 RTP_Engine::~RTP_Engine()
 {
-    delete mutex;
-    for (int idx = 0; idx < 2; idx++)
+    while (true)
     {
-        delete[] packets[idx];
+        struct Block *block = blocks.pop(mutex);
+        if (!block) break;
+        allocator->free(block->packet);
+        delete block;
     }
+    delete mutex;
 }
 
-int16_t *RTP_Engine::rx_buff(int idx)
-{
-    ASSERT(idx < 2);
-    return packets[idx]->get_audio();
-}
-
-size_t RTP_Engine::rx_bytes(int)
+size_t RTP_Engine::rx_bytes()
 {
     return num_samples * 2 * sizeof(uint16_t);
 }
@@ -122,20 +154,38 @@ static int send_packet(RTP_Client *client, void *arg)
     return 0;
 }
 
-int RTP_Engine::send(int idx, size_t samples)
+#include "panglos/drivers/gpio.h"
+#include "panglos/object.h"
+
+int RTP_Engine::send(struct Block *block)
 {
-    if (samples > num_samples) return false;
-    if (samples <= 0) return false;
+#if defined(ESP32)
+    static panglos::GPIO *gpio = 0;
+    static bool first = true;
+    if (first && !gpio)
+    {
+        gpio = (panglos::GPIO*) panglos::Objects::objects->get("dbg");
+        first = false;
+    }
+    if (gpio)
+    {
+        gpio->toggle();
+    }
+#endif
+
+    if (block->samples > num_samples) return false;
+    if (block->samples <= 0) return false;
     // increment the seq id
-    ASSERT(idx < 2);
-    RTP_Header *packet = packets[idx];
-    packet->set_seq(packet_seq++);
-    packet->set_timestamp(timestamp);
-    timestamp += (int32_t) samples;
+    block->packet->set_seq(packet_seq++);
+    block->packet->set_timestamp(timestamp);
+    timestamp += (int32_t) block->samples;
     // send the packet to all the clients in PLAY state
-    size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * samples);
-    struct Buffer params = { .data = (uint8_t*) packet, .size = packet_size };
+    size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * block->samples);
+    struct Buffer params = { .data = (uint8_t*) block->packet, .size = packet_size };
     playing.visit(send_packet, & params, mutex);
+
+    // recyle the block
+    put_free(block);
     return true;
 }
 

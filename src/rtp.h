@@ -61,10 +61,10 @@ RTP_Header
         set_u32(& head[8], ssrc);
     }
 
-    int16_t *get_audio()
+    uint8_t *get_audio()
     {
         // TODO : check CSRC & Extension blocks
-        return & audio[0];
+        return (uint8_t*) & audio[0];
     }
 };
 
@@ -94,20 +94,49 @@ public:
      *
      */
 
+class Allocator
+{
+public:
+    virtual ~Allocator() { }
+
+    virtual void* malloc(size_t bytes) = 0;
+    virtual void free(void *) = 0;
+
+    static Allocator* system();
+};
+
+    /*
+     *
+     */
+
 class RTP_Engine
 {
     int rtp_port;
     int rtcp_port;
-    struct RTP_Header *packets[2];
+    Allocator *allocator;
     panglos::List<RTP_Client*> playing;
     panglos::Mutex *mutex;
     uint16_t packet_seq;
     uint32_t timestamp;
 
 public:
-    const size_t num_samples = 480;
+    // 360 samples gives a 1496 byte packet, small enough to avoid fragmentation.
+    const size_t num_samples = 360;
 
-    RTP_Engine(int rtp_port, int rtcp_port);
+    struct Block
+    {
+        struct RTP_Header *packet;
+        size_t samples;
+
+        struct Block *next;
+        static Block **get_next(struct Block *b) { return & b->next; }
+    };
+
+    typedef panglos::List<struct Block*> Blocks;
+
+    Blocks blocks;
+
+    RTP_Engine(int rtp_port, int rtcp_port, int num_buffers, Allocator *alloc=0);
     ~RTP_Engine();
 
     void get_server_ports(int *a, int *b);
@@ -116,10 +145,11 @@ public:
     void play(RTP_Client *);
     void remove(RTP_Client *);
 
-    int send(int idx, size_t samples);
+    int send(struct Block *block);
+    struct Block *get_free() { return blocks.pop(mutex); }
+    void put_free(struct Block *b) { blocks.push(b, mutex); }
 
-    int16_t *rx_buff(int idx);
-    size_t rx_bytes(int idx);
+    size_t rx_bytes();
 
     // Stats
     int get_num_clients();

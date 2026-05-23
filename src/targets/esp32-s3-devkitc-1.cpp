@@ -29,18 +29,17 @@ using namespace panglos;
 
 #if defined(ESP32_S3_DKC1)
 
-//#define GPIO_TEST
-
 #define SCK GPIO_NUM_12
 #define WS GPIO_NUM_13
 #define SD GPIO_NUM_14
 
-#if defined(GPIO_TEST)
-#define INPUT ESP_GPIO::IP | ESP_GPIO::PU
-static const GPIO_DEF sck_def = { SCK, INPUT };
-static const GPIO_DEF ws_def = { WS, INPUT };
-static const GPIO_DEF sd_def = { SD, INPUT };
-#endif
+//#define RGB GPIO_NUM_11
+// Dammit, I've used the RGB LED for +5V I2C, so probably blown it up.
+//#define RGB GPIO_NUM_38
+
+#define DEBUG_PIN GPIO_NUM_10
+
+static const GPIO_DEF debug_def = { DEBUG_PIN, ESP_GPIO::OP };
 
     /*
      *
@@ -48,27 +47,21 @@ static const GPIO_DEF sd_def = { SD, INPUT };
 
 static Device _board_devs[] = {
     //DEV_GPIO("led", 0, & led_def),
-#if defined(GPIO_TEST)
-    DEV_GPIO("sck", 0, & sck_def),
-    DEV_GPIO("ws", 0, & ws_def),
-    DEV_GPIO("sd", 0, & sd_def),
-#endif
+    DEV_GPIO("dbg", 0, & debug_def),
     Device(0, 0, 0, 0, 0),
 };
 
 void board_init()
 {
-#if !defined(GPIO_TEST)
     board_init(SCK, WS, SD);
-#endif
 
-#if 0
-    // Dammit, I've used the RGB LED for +5V I2C, so probably blown it up.
-    int num = 1;
-    RmtLedStrip *leds = RmtLedStrip::create(num, 24, RmtLedStrip::SK68XX);
-    bool ok = leds->init(0, GPIO_NUM_38);
+#if defined(RGB)
+    int num = 2;
+    RmtLedStrip *leds = RmtLedStrip::create(num, 24, RmtLedStrip::Type::WS2812B); // , RmtLedStrip::SK68XX);
+    bool ok = leds->init(0, RGB);
     ASSERT(ok);
     leds->set(0, 0x40, 0x40, 0x40);
+    leds->set(1, 0x40, 0, 0);
 #endif
 }
 
