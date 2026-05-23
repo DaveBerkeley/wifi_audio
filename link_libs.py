@@ -126,6 +126,7 @@ files = [
     'esp32/uart.cpp',
     'esp32/network.cpp',
     'esp32/ntp.cpp',
+    'esp32/rmt_strip.cpp',
 
     'panglos/esp32/gpio.h',
     'panglos/esp32/i2c.h',
