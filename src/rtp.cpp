@@ -4,8 +4,14 @@
 
 #include "panglos/debug.h"
 #include "panglos/mutex.h"
+#include "panglos/verbose.h"
+#include "panglos/time.h"
+
+using namespace panglos;
 
 #include "rtp.h"
+
+static VERBOSE(rtp, "rtp", false);
 
     /*
      *
@@ -14,6 +20,7 @@
 RTP_Client::RTP_Client(panglos::Socket *s)
 :   socket(s),
     num_packets(0),
+    num_errors(0),
     next(0)
 {
 }
@@ -150,16 +157,31 @@ static int send_packet(RTP_Client *client, void *arg)
     ASSERT(client);
     ASSERT(arg);
     struct Buffer *b = (struct Buffer *) arg;
-    client->send(b->data, b->size);
+    const int sent = client->send(b->data, b->size);
+
+    // log tx errors
+    if (sent != b->size)
+    {
+        client->error();
+        static Time::tick_t last_error = 0;
+        if (rtp.verbose)
+        {
+            if (Time::elapsed(last_error, 100))
+            {
+                last_error = Time::get();
+                PO_ERROR("tx errors %d", client->get_num_errors());
+            }
+        }
+    }
     return 0;
 }
 
+#if defined(ESP32)
 #include "panglos/drivers/gpio.h"
 #include "panglos/object.h"
 
-int RTP_Engine::send(struct Block *block)
+static void TRACE()
 {
-#if defined(ESP32)
     static panglos::GPIO *gpio = 0;
     static bool first = true;
     if (first && !gpio)
@@ -171,7 +193,17 @@ int RTP_Engine::send(struct Block *block)
     {
         gpio->toggle();
     }
+}
+
+#else
+
+#define TRACE()
+
 #endif
+
+int RTP_Engine::send(struct Block *block)
+{
+    TRACE();
 
     if (block->samples > num_samples) return false;
     if (block->samples <= 0) return false;

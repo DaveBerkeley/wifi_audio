@@ -76,6 +76,7 @@ class RTP_Client
 {
     panglos::Socket *socket;
     int num_packets;
+    int num_errors;
     RTP_Client *next;
 
 public:
@@ -86,6 +87,9 @@ public:
     
     panglos::Socket *get_socket() { return socket; }
     int get_num_packets() { return num_packets; }
+    int get_num_errors() { return num_errors; }
+
+    void error() { num_errors += 1; }
 
     static RTP_Client **get_next(RTP_Client *item) { return & item->next; }
 };
