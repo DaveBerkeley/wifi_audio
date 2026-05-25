@@ -37,6 +37,8 @@ public:
      *
      */
 
+#define CPU_CORE 0 // -1 for "no affinity"
+
 static void server(void *arg)
 {
     PO_DEBUG("");
@@ -57,7 +59,7 @@ static void server(void *arg)
 
     Thread *thread = Thread::create("rtp");
     static struct AudioCopy ac = { .src = src, .dst = rtp };
-    thread->start(run_audio_copy, & ac);
+    thread->start(run_audio_copy, & ac, CPU_CORE);
 
     // blocking call to run server
     SID sid;
@@ -71,7 +73,7 @@ void run_server(struct ServerDesc *info)
 {
     PO_DEBUG("");
     Thread *thread = Thread::create("rtsp");
-    thread->start(server, info);
+    thread->start(server, info, CPU_CORE);
 }
 
     /*
@@ -90,7 +92,11 @@ static void cmd_rtp(CLI *cli, CliCommand *)
     {
         RTP_Client *client = rtp->get_client(idx);
         if (!client) continue;
-        cli_print(cli, "client %p: %d%s", client, client->get_num_packets(), cli->eol);
+        cli_print(cli, "client=%p: packets=%d errors=%d%s", 
+            client, 
+            client->get_num_packets(), 
+            client->get_num_errors(), 
+            cli->eol);
     }
 }
 
