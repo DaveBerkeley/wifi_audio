@@ -113,8 +113,11 @@ public:
      *
      */
 
+class AudioCodec;
+
 class RTP_Engine
 {
+    AudioCodec *codec;
     int rtp_port;
     int rtcp_port;
     Allocator *allocator;
@@ -140,7 +143,7 @@ public:
 
     Blocks blocks;
 
-    RTP_Engine(int rtp_port, int rtcp_port, int num_buffers, Allocator *alloc=0);
+    RTP_Engine(AudioCodec *codec, int rtp_port, int rtcp_port, int num_buffers, Allocator *alloc=0);
     ~RTP_Engine();
 
     void get_server_ports(int *a, int *b);

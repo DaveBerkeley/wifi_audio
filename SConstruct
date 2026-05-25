@@ -4,6 +4,7 @@ files = [
     'src/rtsp_server.cpp',
     'src/rtp.cpp',
     'src/utils.cpp',
+    'src/audio_codec_pcm.cpp',
 
     'test/main.cpp',
     'test/storage.cpp',

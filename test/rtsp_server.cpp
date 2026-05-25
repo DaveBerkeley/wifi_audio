@@ -13,6 +13,7 @@ using namespace panglos;
 #include "rtp.h"
 #include "i2s.h"
 #include "utils.h"
+#include "audio_codec.h"
 
     /*
      *
@@ -30,7 +31,8 @@ public:
 
 TEST(RtspServer, Test)
 {
-    RTP_Engine rtp(6000, 6001, 2);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTP_Engine rtp(codec, 6000, 6001, 2);
 
     Test_1kHz_Source source(& rtp);
 
@@ -42,10 +44,11 @@ TEST(RtspServer, Test)
     // blocking call to run server
     SID sid;
     const char *ip = "0.0.0.0"; // all interfaces
-    rtsp_server(ip, "8554", & rtp, & sid);
+    rtsp_server(ip, "8554", & rtp, codec, & sid);
 
     thread->join();
     delete thread;
+    delete codec;
 }
 
 //  FIN

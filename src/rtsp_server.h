@@ -16,7 +16,9 @@ public:
     virtual uint32_t generate() = 0;
 };
 
-void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, SidGenerator *gen=0);
+class AudioCodec;
+
+void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, AudioCodec *codec, SidGenerator *gen=0);
 
     /*
      *
@@ -51,6 +53,7 @@ class RTSP_Handler : public RTSP_Session::Handler
     panglos::CharOut *out;
     panglos::FmtOut *fmt;
     RTP_Client *rtp_client;
+    AudioCodec *codec;
 
     // command responses
     int describe(RtspHeader *hdrs);
@@ -67,7 +70,7 @@ class RTSP_Handler : public RTSP_Session::Handler
     char *get_ip(panglos::Socket *);
 
 public:
-    RTSP_Handler(RTP_Engine *rtp, panglos::Socket *s, const char *ip, const char *port, int sid);
+    RTSP_Handler(RTP_Engine *rtp, AudioCodec *code, panglos::Socket *s, const char *ip, const char *port, int sid);
     ~RTSP_Handler();
 
     virtual RtspCommand error(int code) override;

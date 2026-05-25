@@ -10,6 +10,7 @@
 using namespace panglos;
 
 #include "rtp.h"
+#include "audio_codec.h"
 
 static VERBOSE(rtp, "rtp", false);
 
@@ -64,8 +65,9 @@ Allocator *Allocator::system()
      *
      */
 
-RTP_Engine::RTP_Engine(int rtp, int rtcp, int num_buffers, Allocator *a)
-:   rtp_port(rtp),
+RTP_Engine::RTP_Engine(AudioCodec *_codec, int rtp, int rtcp, int num_buffers, Allocator *a)
+:   codec(_codec),
+    rtp_port(rtp),
     rtcp_port(rtcp),
     allocator(a),
     playing(RTP_Client::get_next),
@@ -125,7 +127,8 @@ void RTP_Engine::get_server_ports(int *a, int *b)
 uint8_t RTP_Engine::get_payload_type()
 {
     // we map this to 16-bit PCM in the RSTP/SDP DESCRIBE Response
-    return 96;
+    ASSERT(codec);
+    return (uint8_t) codec->get_payload_type();
 }
 
 void RTP_Engine::play(RTP_Client *client)
@@ -160,7 +163,7 @@ static int send_packet(RTP_Client *client, void *arg)
     const int sent = client->send(b->data, b->size);
 
     // log tx errors
-    if (sent != b->size)
+    if (sent != (int) b->size)
     {
         client->error();
         static Time::tick_t last_error = 0;

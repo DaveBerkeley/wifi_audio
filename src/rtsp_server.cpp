@@ -10,6 +10,7 @@
 
 #include "rtsp_server.h"
 #include "rtp.h"
+#include "audio_codec.h"
 
 using namespace panglos;
 
@@ -37,7 +38,8 @@ void SocketOut::set_socket(Socket *s)
      *
      */
 
-RTSP_Handler::RTSP_Handler(RTP_Engine *_rtp, panglos::Socket *s, const char *ip, const char *_port, int sid)
+RTSP_Handler::RTSP_Handler(RTP_Engine *_rtp, AudioCodec *_codec,
+        panglos::Socket *s, const char *ip, const char *_port, int sid)
 :   rtp(_rtp),
     last_error(E_OK),
     session_id(sid),
@@ -48,7 +50,8 @@ RTSP_Handler::RTSP_Handler(RTP_Engine *_rtp, panglos::Socket *s, const char *ip,
     buff(0),
     out(0),
     fmt(0),
-    rtp_client(0)
+    rtp_client(0),
+    codec(_codec)
 {
     const int sz = 1024;
     buff = new char[sz];
@@ -99,21 +102,13 @@ void RTSP_Handler::flush()
 int RTSP_Handler::describe(RtspHeader *hdrs)
 {
     // SDP payload
-    const char *sdp_fmt = 
-        "v=0\r\n" // protocol version
-        "o=- %d %d IN IP4 %s\r\n"
-        "s=Audio Stream\r\n"
-        "c=IN IP4 0.0.0.0\r\n" // connection data - fixed during SETUP phase
-        "t=0 0\r\n" // timing 
-        "m=audio 0 RTP/AVP %d\r\n" // media announcement : 96 = dynamic payload
-        "a=rtpmap:%d L16/48000/2\r\n" // map the payload type
-        ;
+    ASSERT(codec);
+    const char *sdp_fmt = codec->get_sdp_fmt();
 
     ASSERT(rtp);
     size_t sz = 1024;
     char *buff = (char*) malloc(sz);
-    int pt = rtp->get_payload_type();
-    snprintf(buff, sz, sdp_fmt, session_id, session_version, ip_addr, pt, pt);
+    snprintf(buff, sz, sdp_fmt, session_id, session_version, ip_addr);
 
     int code = E_OK;
     ASSERT(fmt);
@@ -447,7 +442,7 @@ class RtspClient : public Client
     }
 
 public:
-    RtspClient(SocketServer *ss, RTP_Engine *r, const char *ip, const char *port, uint32_t sid)
+    RtspClient(SocketServer *ss, RTP_Engine *r, AudioCodec *codec, const char *ip, const char *port, uint32_t sid)
     :   Client(ss),
         rtp(r),
         handler(0),
@@ -459,7 +454,9 @@ public:
         buff = new char[sz];
         memset(buff, 0, sz);
 
-        handler = new RTSP_Handler(rtp, sock, ip, port, sid);
+        ASSERT(codec);
+        PO_DEBUG("codec=%s", codec->name());
+        handler = new RTSP_Handler(rtp, codec, sock, ip, port, sid);
         session = RTSP_Session::create(handler);
     }
 
@@ -481,18 +478,20 @@ class Factory : public Client::Factory
     const char *ip;
     const char *port;
     SidGenerator *sid_gen;
+    AudioCodec *codec;
 
     virtual Client *create_client(SocketServer *ss) override
     {
         uint32_t sid = sid_gen ? sid_gen->generate() : 12345;
-        return new RtspClient(ss, rtp, ip, port, sid);
+        return new RtspClient(ss, rtp, codec, ip, port, sid);
     }
 public:
-    Factory(RTP_Engine *r, const char *_ip, const char *_port, SidGenerator *gen=0)
+    Factory(RTP_Engine *r, AudioCodec *_codec, const char *_ip, const char *_port, SidGenerator *gen=0)
     :   rtp(r),
         ip(strdup(_ip)),
         port(strdup(_port)),
-        sid_gen(gen)
+        sid_gen(gen),
+        codec(_codec)
     {
     }
 
@@ -507,7 +506,7 @@ public:
      *
      */
 
-void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, SidGenerator *gen)
+void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, AudioCodec *codec, SidGenerator *gen)
 {
     Socket *socket = Socket::open_tcpip(ip, port, Socket::SERVER);
     if (!socket)
@@ -515,7 +514,7 @@ void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, SidGenerator
         PO_ERROR("unable to open socket(%s,%s)", ip, port);
         return;
     }
-    Factory factory(rtp, ip, port, gen);
+    Factory factory(rtp, codec, ip, port, gen);
     // blocking call to socket server
     run_socket_server(socket, & factory);
     delete socket;

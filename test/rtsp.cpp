@@ -11,6 +11,7 @@
 #include "rtsp.h"
 #include "rtsp_server.h"
 #include "rtp.h"
+#include "audio_codec.h"
 
 static size_t set_buff(char *buff, size_t s, const char **lines)
 {
@@ -95,9 +96,10 @@ const int sid = 12345;
 
 TEST(RTSP, Describe)
 {
-    RTP_Engine rtp(6000, 6001, 2);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -134,12 +136,14 @@ TEST(RTSP, Describe)
         socket.get_buff());
 
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, NoSdp)
 {
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -159,12 +163,14 @@ TEST(RTSP, NoSdp)
 
     printf("%s", socket.get_buff());
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, WrongVersion)
 {
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -183,12 +189,14 @@ TEST(RTSP, WrongVersion)
 
     printf("%s", socket.get_buff());
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, BadCommand)
 {
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -207,13 +215,15 @@ TEST(RTSP, BadCommand)
 
     printf("%s", socket.get_buff());
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, IgnoreLeading)
 {
-    RTP_Engine rtp(6000, 6001, 2);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -235,13 +245,15 @@ TEST(RTSP, IgnoreLeading)
 
     printf("%s", socket.get_buff());
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, Setup)
 {
-    RTP_Engine rtp(6010, 6011, 2);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTP_Engine rtp(codec, 6010, 6011, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -269,13 +281,15 @@ TEST(RTSP, Setup)
         "\r\n",  socket.get_buff());
 
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, SetupComplex)
 {
-    RTP_Engine rtp(6000, 6001, 2);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -297,13 +311,15 @@ TEST(RTSP, SetupComplex)
 
     printf("%s", socket.get_buff());
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, SetupComma)
 {
-    RTP_Engine rtp(6000, 6001, 2);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -328,12 +344,14 @@ TEST(RTSP, SetupComma)
 
     printf("%s", socket.get_buff());
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, Options)
 {
     TestSocket socket;
-    RTSP_Handler handler(0, & socket, ip_addr, port, sid);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -361,13 +379,15 @@ TEST(RTSP, Options)
         socket.get_buff());
 
     delete session;
+    delete codec;
 }
 
 TEST(RTSP, Play)
 {
-    RTP_Engine rtp(6000, 6001, 2);
+    AudioCodec *codec = create_pcm(16, 2, 48000);
+    RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -418,6 +438,7 @@ TEST(RTSP, Play)
         socket.get_buff());
 
     delete session;
+    delete codec;
 }
 
 //  FIN
