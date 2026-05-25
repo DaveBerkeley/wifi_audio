@@ -1,0 +1,328 @@
+import os
+from pathlib import Path
+
+# Environment setup with custom options
+env = Environment(
+    ENV=os.environ,
+    tools=['gcc', 'g++', 'ar', 'as'],
+    toolpath=[]
+)
+
+# Allow command-line overrides
+opts = Variables()
+opts.Add(EnumVariable('debug', 'Build with debug symbols', 'no', 
+                      allowed_values=('yes', 'no')))
+opts.Add(PathVariable('PREFIX', 'Installation prefix', '/usr/local'))
+opts.Add(BoolVariable('fixed_point', 'Use fixed-point implementation (for embedded)', 1))
+opts.Add(BoolVariable('float_approx', 'Use float approximations', 0))
+opts.Add(BoolVariable('custom_modes', 'Enable custom modes', 1))
+opts.Add(BoolVariable('asm', 'Enable assembly optimizations', 1))
+opts.Add(BoolVariable('rtcd', 'Enable runtime CPU detection', 1))
+opts.Add('EXTRA_CFLAGS', 'Additional C compiler flags', '')
+
+# Apply options to environment
+opts.Update(env)
+Help(opts.GenerateHelpText(env))
+
+# Platform detection
+is_linux = os.name == 'posix'
+is_esp32 = 'ESP32' in os.environ.get('IDF_TARGET', '')
+
+# Determine library paths
+OPUS_SRC_DIR = 'opus'  # Directory containing Opus source
+BUILD_DIR = 'build'
+INSTALL_DIR = env['PREFIX']
+
+# Create build directory if it doesn't exist
+if not os.path.exists(BUILD_DIR):
+    os.makedirs(BUILD_DIR)
+
+# Base compiler flags
+base_cflags = [
+    '-O2' if env['debug'] == 'no' else '-O0 -g',
+    '-Wall',
+    '-Wextra',
+    '-Wno-unused-parameter',
+    '-Wno-maybe-uninitialized',
+    '-std=c99',  # Opus requires C99
+    '-DHAVE_CONFIG_H',
+    '-DUSE_ALLOCA',
+]
+
+# Fixed-point configuration (critical for ESP32)
+base_cflags.append('-DFIXED_POINT=1')
+if env['float_approx']:
+    base_cflags.append('-DFLOAT_APPROX=1')
+
+# Feature flags
+if env['custom_modes']:
+    base_cflags.append('-DCUSTOM_MODES=1')
+
+if env['asm']:
+    if is_linux:
+        base_cflags.append('-DOPUS_HAVE_RTCD=1')
+    elif is_esp32:
+        # ESP32-specific assembly optimizations
+        base_cflags.extend(['-DOPUS_HAVE_RTCD=1', '-DUSE_SSE=0'])
+
+if not env['rtcd']:
+    base_cflags.append('-DOPUS_DISABLE_RTCD=1')
+
+# Add extra flags if provided
+if env.get('EXTRA_CFLAGS'):
+    base_cflags.extend(env['EXTRA_CFLAGS'].split())
+
+# ESP32-specific include paths (avoid header clashes)
+if is_esp32:
+    # Include paths with proper ordering to prevent clashes
+    env.Append(CPPPATH=[
+        OPUS_SRC_DIR,
+        OPUS_SRC_DIR + '/include',
+        OPUS_SRC_DIR + '/celt',
+        OPUS_SRC_DIR + '/silk',
+        OPUS_SRC_DIR + '/silk/fixed',
+    ])
+    # Ensure system headers don't override Opus headers
+    env.Append(CPPPATH=['.', OPUS_SRC_DIR])
+else:
+    env.Append(CPPPATH=[
+        '.',
+        OPUS_SRC_DIR,
+        OPUS_SRC_DIR + '/include',
+        OPUS_SRC_DIR + '/celt',
+        OPUS_SRC_DIR + '/silk',
+        OPUS_SRC_DIR + '/silk/fixed',
+    ])
+
+# Set compiler flags
+env.Append(CCFLAGS=base_cflags)
+
+config_header = '''
+#include <alloca.h>
+#define OPUS_BUILD 1
+#define HAVE_LRINT 1
+#define HAVE_LRINTF 1
+#define HAVE_MEMORY_H 1
+#define HAVE_STDINT_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_STRING_H 1
+'''
+
+with open('config.h', 'w') as f:
+    f.write(config_header)
+
+env.Append(CPPDEFINES=['HAVE_CONFIG_H'])
+env.Append(CPPPATH=['.'])
+
+# Linker flags
+env.Append(LINKFLAGS=['-lm'])
+
+# Source files to compile
+opus_sources = [
+    # Core Opus files
+    OPUS_SRC_DIR + '/src/opus.c',
+    OPUS_SRC_DIR + '/src/opus_decoder.c',
+    OPUS_SRC_DIR + '/src/opus_encoder.c',
+    OPUS_SRC_DIR + '/src/opus_multistream.c',
+    OPUS_SRC_DIR + '/src/opus_multistream_encoder.c',
+    OPUS_SRC_DIR + '/src/opus_multistream_decoder.c',
+    OPUS_SRC_DIR + '/src/repacketizer.c',
+    OPUS_SRC_DIR + '/src/analysis.c',
+    OPUS_SRC_DIR + '/src/mlp.c',
+    OPUS_SRC_DIR + '/src/mlp_data.c',
+    
+    # CELT files
+    OPUS_SRC_DIR + '/celt/bands.c',
+    OPUS_SRC_DIR + '/celt/celt.c',
+    OPUS_SRC_DIR + '/celt/celt_decoder.c',
+    OPUS_SRC_DIR + '/celt/celt_encoder.c',
+    OPUS_SRC_DIR + '/celt/celt_lpc.c',
+    OPUS_SRC_DIR + '/celt/cwrs.c',
+    OPUS_SRC_DIR + '/celt/entcode.c',
+    OPUS_SRC_DIR + '/celt/entdec.c',
+    OPUS_SRC_DIR + '/celt/entenc.c',
+    OPUS_SRC_DIR + '/celt/kiss_fft.c',
+    OPUS_SRC_DIR + '/celt/laplace.c',
+    OPUS_SRC_DIR + '/celt/mathops.c',
+    OPUS_SRC_DIR + '/celt/mdct.c',
+    OPUS_SRC_DIR + '/celt/modes.c',
+    OPUS_SRC_DIR + '/celt/pitch.c',
+    OPUS_SRC_DIR + '/celt/quant_bands.c',
+    OPUS_SRC_DIR + '/celt/rate.c',
+    OPUS_SRC_DIR + '/celt/vq.c',
+    
+    # SILK files
+    OPUS_SRC_DIR + '/silk/CNG.c',
+    OPUS_SRC_DIR + '/silk/code_signs.c',
+    OPUS_SRC_DIR + '/silk/init_decoder.c',
+    OPUS_SRC_DIR + '/silk/init_encoder.c',
+    #OPUS_SRC_DIR + '/silk/control.c',
+    OPUS_SRC_DIR + '/silk/control_codec.c',
+    OPUS_SRC_DIR + '/silk/debug.c',
+    OPUS_SRC_DIR + '/silk/dec_API.c',
+    OPUS_SRC_DIR + '/silk/enc_API.c',
+    OPUS_SRC_DIR + '/silk/encode_indices.c',
+    OPUS_SRC_DIR + '/silk/encode_pulses.c',
+    OPUS_SRC_DIR + '/silk/gain_quant.c',
+    OPUS_SRC_DIR + '/silk/HP_variable_cutoff.c',
+    #OPUS_SRC_DIR + '/silk/Inlines.c',
+    OPUS_SRC_DIR + '/silk/LPC_analysis_filter.c',
+    OPUS_SRC_DIR + '/silk/LPC_inv_pred_gain.c',
+    OPUS_SRC_DIR + '/silk/LP_variable_cutoff.c',
+    #OPUS_SRC_DIR + '/silk/LTP_analysis_filter.c',
+    #OPUS_SRC_DIR + '/silk/LTP_scale_ctrl.c',
+    OPUS_SRC_DIR + '/silk/NLSF_decode.c',
+    OPUS_SRC_DIR + '/silk/NLSF_del_dec_quant.c',
+    OPUS_SRC_DIR + '/silk/NLSF_encode.c',
+    OPUS_SRC_DIR + '/silk/NLSF_stabilize.c',
+    OPUS_SRC_DIR + '/silk/NLSF_unpack.c',
+    OPUS_SRC_DIR + '/silk/NLSF_VQ_weights_laroia.c',
+    OPUS_SRC_DIR + '/silk/pitch_est_tables.c',
+    OPUS_SRC_DIR + '/silk/process_NLSFs.c',
+    OPUS_SRC_DIR + '/silk/quant_LTP_gains.c',
+    OPUS_SRC_DIR + '/silk/resampler.c',
+    OPUS_SRC_DIR + '/silk/resampler_down2.c',
+    OPUS_SRC_DIR + '/silk/resampler_down2_3.c',
+    OPUS_SRC_DIR + '/silk/resampler_private_AR2.c',
+    #OPUS_SRC_DIR + '/silk/resampler_private_ARMA4.c',
+    OPUS_SRC_DIR + '/silk/resampler_private_down_FIR.c',
+    OPUS_SRC_DIR + '/silk/resampler_private_IIR_FIR.c',
+    OPUS_SRC_DIR + '/silk/resampler_private_up2_HQ.c',
+    OPUS_SRC_DIR + '/silk/resampler_rom.c',
+    OPUS_SRC_DIR + '/silk/sigm_Q15.c',
+    OPUS_SRC_DIR + '/silk/sort.c',
+    OPUS_SRC_DIR + '/silk/stereo_decode_pred.c',
+    OPUS_SRC_DIR + '/silk/stereo_encode_pred.c',
+    OPUS_SRC_DIR + '/silk/stereo_find_predictor.c',
+    OPUS_SRC_DIR + '/silk/stereo_LR_to_MS.c',
+    OPUS_SRC_DIR + '/silk/stereo_MS_to_LR.c',
+    OPUS_SRC_DIR + '/silk/stereo_quant_pred.c',
+    OPUS_SRC_DIR + '/silk/sum_sqr_shift.c',
+    OPUS_SRC_DIR + '/silk/table_LSF_cos.c',
+    OPUS_SRC_DIR + '/silk/tables_gain.c',
+    OPUS_SRC_DIR + '/silk/tables_LTP.c',
+    OPUS_SRC_DIR + '/silk/tables_NLSF_CB_NB_MB.c',
+    OPUS_SRC_DIR + '/silk/tables_NLSF_CB_WB.c',
+    OPUS_SRC_DIR + '/silk/tables_other.c',
+    OPUS_SRC_DIR + '/silk/tables_pitch_lag.c',
+    OPUS_SRC_DIR + '/silk/tables_pulses_per_block.c',
+    OPUS_SRC_DIR + '/silk/VAD.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_apply_sine_window_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_corrMatrix_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_energy_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_LPC_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_LTP_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_pitch_lags_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_pred_coefs_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_levinsondurbin_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LPC_analysis_filter_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LPC_inv_pred_gain_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LTP_analysis_filter_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LTP_scale_ctrl_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_noise_shape_analysis_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_process_gains_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_regularize_correlations_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_residual_energy_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_scale_copy_vector_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_scale_vector_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_schur_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_solve_LS_FLP.c',
+    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_warped_autocorrelation_FLP.c',
+    OPUS_SRC_DIR + '/silk/fixed/apply_sine_window_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/autocorr_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/burg_modified_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/corrMatrix_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/encode_frame_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/find_LPC_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/find_LTP_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/find_pitch_lags_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/find_pred_coefs_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/k2a_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/k2a_Q16_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/LTP_analysis_filter_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/LTP_scale_ctrl_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/main_FIX.h',
+    OPUS_SRC_DIR + '/silk/fixed/noise_shape_analysis_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/pitch_analysis_core_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/process_gains_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/regularize_correlations_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/residual_energy16_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/residual_energy_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/schur64_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/schur_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/structs_FIX.h',
+    OPUS_SRC_DIR + '/silk/fixed/vector_ops_FIX.c',
+    OPUS_SRC_DIR + '/silk/fixed/warped_autocorrelation_FIX.c',
+]
+
+# Filter source files based on configuration
+if not env['fixed_point']:
+    # For floating point, exclude fixed-point specific files
+    opus_sources = [s for s in opus_sources if 'fixed' not in s.lower()]
+else:
+    # For fixed-point, we want the fixed-point SILK implementation
+    # The code above already includes fixed-point files when configured
+    pass
+
+# Build static library
+libopus = env.StaticLibrary(
+    target=os.path.join(BUILD_DIR, 'libopus'),
+    source=opus_sources
+)
+
+# Build shared library (optional, for Linux)
+if is_linux and not env['fixed_point']:
+    libopus_shared = env.SharedLibrary(
+        target=os.path.join(BUILD_DIR, 'libopus'),
+        source=opus_sources
+    )
+    Default(libopus_shared)
+
+# Installation target
+def install_lib(target, source, env):
+    install_dir = env['PREFIX']
+    lib_dir = os.path.join(install_dir, 'lib')
+    include_dir = os.path.join(install_dir, 'include', 'opus')
+    
+    # Create directories
+    if not os.path.exists(lib_dir):
+        os.makedirs(lib_dir)
+    if not os.path.exists(include_dir):
+        os.makedirs(include_dir)
+    
+    # Copy library
+    lib_file = os.path.join(BUILD_DIR, 'libopus.a')
+    if os.path.exists(lib_file):
+        shutil.copy2(lib_file, os.path.join(lib_dir, 'libopus.a'))
+        print(f"Installed library to {lib_dir}")
+    
+    # Copy headers
+    headers = [
+        'opus.h',
+        'opus_custom.h',
+        'opus_defines.h',
+        'opus_multistream.h',
+        'opus_types.h',
+    ]
+    for header in headers:
+        src = os.path.join(OPUS_SRC_DIR, 'include', header)
+        if os.path.exists(src):
+            shutil.copy2(src, os.path.join(include_dir, header))
+            print(f"Installed header {header} to {include_dir}")
+
+env.Command('install', libopus, install_lib)
+
+# Set default target
+Default(libopus)
+
+# Print build configuration
+print("\n=== Opus Build Configuration ===")
+print(f"Debug mode: {env['debug']}")
+print(f"Fixed-point: {env['fixed_point']}")
+print(f"Assembly optimizations: {env['asm']}")
+print(f"Custom modes: {env['custom_modes']}")
+print(f"RTCD: {env['rtcd']}")
+print(f"Build directory: {BUILD_DIR}")
+print(f"Install prefix: {INSTALL_DIR}")
+print("================================\n")
+
