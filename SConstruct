@@ -56,6 +56,9 @@ panglos = [
 for path in panglos:
     files.append('../panglos/' + path)
 
+#
+#
+
 ccflags = [
     '-Wswitch-default',
     #'-Wswitch-enum',
@@ -101,9 +104,13 @@ lflags = [
     '-g',
 ]
 
-libpath = [ ]
+libpath = [
+    'third_party/build',
+]
 
-libs = []
+libs = [
+    'libopus',
+]
 
 import os
 cc = os.environ.get('CC', 'gcc')
@@ -121,6 +128,8 @@ if cc == 'clang':
         cflags  += [ x ]
         ccflags += [ x ]
         lflags  += [ x ]
+
+SConscript('third_party/SConscript')
 
 env = Environment(CFLAGS=cflags, CCFLAGS=ccflags, CXXFLAGS=cxxflags, LINKFLAGS=lflags, CPPPATH=cpppath, CC=cc, CXX=cxx)
 tdd = env.Program(target='tdd', source=files, LIBS=libs, LIBPATH=libpath)
