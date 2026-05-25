@@ -20,7 +20,7 @@ class _I2S : public I2S
 public:
     _I2S() { }
 
-    bool init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd, uint32_t freq)
+    bool init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd, uint32_t freq, bool byte_swap)
     {
         PO_DEBUG("sck=%d ws=%d sd=%d freq=%d", sck, ws, sd, freq);
         // General channel configuration (handles DMA and role)
@@ -56,6 +56,9 @@ public:
                 },
             },
         };
+
+        // byte-swap for systems that want little-endian native data
+        std_cfg.slot_cfg.big_endian = byte_swap;
 
         // Apply the I2S configuration to the channel
         err = i2s_channel_init_std_mode(handle, & std_cfg);
@@ -97,10 +100,10 @@ public:
      *
      */
 
-I2S *I2S::create(int sck, int ws, int sd, uint32_t freq)
+I2S *I2S::create(int sck, int ws, int sd, uint32_t freq, bool byte_swap)
 {
     _I2S *i2s = new _I2S();
-    bool ok = i2s->init((gpio_num_t) sck, (gpio_num_t) ws, (gpio_num_t) sd, freq);
+    bool ok = i2s->init((gpio_num_t) sck, (gpio_num_t) ws, (gpio_num_t) sd, freq, byte_swap);
     if (ok) return i2s;
     delete i2s;
     return 0;

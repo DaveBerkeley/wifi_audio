@@ -270,59 +270,6 @@ libopus = env.StaticLibrary(
     source=opus_sources
 )
 
-# Build shared library (optional, for Linux)
-if is_linux and not env['fixed_point']:
-    libopus_shared = env.SharedLibrary(
-        target=os.path.join(BUILD_DIR, 'libopus'),
-        source=opus_sources
-    )
-    Default(libopus_shared)
+Return('libopus')
 
-# Installation target
-def install_lib(target, source, env):
-    install_dir = env['PREFIX']
-    lib_dir = os.path.join(install_dir, 'lib')
-    include_dir = os.path.join(install_dir, 'include', 'opus')
-    
-    # Create directories
-    if not os.path.exists(lib_dir):
-        os.makedirs(lib_dir)
-    if not os.path.exists(include_dir):
-        os.makedirs(include_dir)
-    
-    # Copy library
-    lib_file = os.path.join(BUILD_DIR, 'libopus.a')
-    if os.path.exists(lib_file):
-        shutil.copy2(lib_file, os.path.join(lib_dir, 'libopus.a'))
-        print(f"Installed library to {lib_dir}")
-    
-    # Copy headers
-    headers = [
-        'opus.h',
-        'opus_custom.h',
-        'opus_defines.h',
-        'opus_multistream.h',
-        'opus_types.h',
-    ]
-    for header in headers:
-        src = os.path.join(OPUS_SRC_DIR, 'include', header)
-        if os.path.exists(src):
-            shutil.copy2(src, os.path.join(include_dir, header))
-            print(f"Installed header {header} to {include_dir}")
-
-env.Command('install', libopus, install_lib)
-
-# Set default target
-Default(libopus)
-
-# Print build configuration
-print("\n=== Opus Build Configuration ===")
-print(f"Debug mode: {env['debug']}")
-print(f"Fixed-point: {env['fixed_point']}")
-print(f"Assembly optimizations: {env['asm']}")
-print(f"Custom modes: {env['custom_modes']}")
-print(f"RTCD: {env['rtcd']}")
-print(f"Build directory: {BUILD_DIR}")
-print(f"Install prefix: {INSTALL_DIR}")
-print("================================\n")
-
+#   FIN

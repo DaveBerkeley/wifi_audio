@@ -5,12 +5,14 @@ files = [
     'src/rtp.cpp',
     'src/utils.cpp',
     'src/audio_codec_pcm.cpp',
+    'src/audio_codec_opus.cpp',
 
     'test/main.cpp',
     'test/storage.cpp',
     'test/rtsp.cpp',
     'test/rtsp_server.cpp',
     'test/rtp.cpp',
+    'test/audio_codec_opus.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',
@@ -48,7 +50,6 @@ panglos = [
     'src/linux/semaphore.cpp',
     'src/linux/time.cpp',
 
-    #'unit-tests/stubs.cpp',
     'unit-tests/thread.cpp',
 
 ]
@@ -74,6 +75,7 @@ ccflags = [
     '-DGTEST=1',
     '-DARCH_LINUX=1',
     '-DAUDIO_TX=1',
+    '-Ithird_party/opus/include',
 ]
 
 cpppath = [

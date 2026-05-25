@@ -94,9 +94,15 @@ const char *ip_addr = "127.0.0.1";
 const char *port = "1234";
 const int sid = 12345;
 
+static struct PcmConfig pcm_config = {
+    .bits = 16,
+    .chans = 2,
+    .freq = 48000,
+};
+
 TEST(RTSP, Describe)
 {
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
@@ -142,7 +148,7 @@ TEST(RTSP, Describe)
 TEST(RTSP, NoSdp)
 {
     TestSocket socket;
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
@@ -169,7 +175,7 @@ TEST(RTSP, NoSdp)
 TEST(RTSP, WrongVersion)
 {
     TestSocket socket;
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
@@ -195,7 +201,7 @@ TEST(RTSP, WrongVersion)
 TEST(RTSP, BadCommand)
 {
     TestSocket socket;
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
@@ -220,7 +226,7 @@ TEST(RTSP, BadCommand)
 
 TEST(RTSP, IgnoreLeading)
 {
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
@@ -250,7 +256,7 @@ TEST(RTSP, IgnoreLeading)
 
 TEST(RTSP, Setup)
 {
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6010, 6011, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
@@ -286,7 +292,7 @@ TEST(RTSP, Setup)
 
 TEST(RTSP, SetupComplex)
 {
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
@@ -316,7 +322,7 @@ TEST(RTSP, SetupComplex)
 
 TEST(RTSP, SetupComma)
 {
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
@@ -350,7 +356,7 @@ TEST(RTSP, SetupComma)
 TEST(RTSP, Options)
 {
     TestSocket socket;
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
@@ -384,7 +390,7 @@ TEST(RTSP, Options)
 
 TEST(RTSP, Play)
 {
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);

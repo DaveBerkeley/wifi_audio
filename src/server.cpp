@@ -43,16 +43,14 @@ public:
 static void server(void *arg)
 {
     PO_DEBUG("");
-    ASSERT(arg);
 
     struct ServerDesc *info = (struct ServerDesc *) arg;
-
-    AudioCodec *codec = create_pcm(16, 2, 48000);
-    ASSERT(codec);
-    PO_DEBUG("codec=%s", codec->name());
+    ASSERT(info);
+    ASSERT(info->codec);
+    PO_DEBUG("codec=%s", info->codec->name());
 
     PO_DEBUG("RTP_Engine(%d,%d)", info->rtp_ports[1], info->rtp_ports[1]);
-    RTP_Engine *rtp = new RTP_Engine(codec, info->rtp_ports[1], info->rtp_ports[1], 2);
+    RTP_Engine *rtp = new RTP_Engine(info->codec, info->rtp_ports[1], info->rtp_ports[1], 2);
     Objects::objects->add("rtp", rtp);
 
     AudioSource *src = (I2S*) Objects::objects->get("i2s");
@@ -71,10 +69,9 @@ static void server(void *arg)
     char port[18];
     snprintf(port, sizeof(port), "%d", info->rtsp_port);
     PO_DEBUG("RTSP(%s:%s)", info->ip, port);
-    rtsp_server(info->ip, port, rtp, codec, & sid);
+    rtsp_server(info->ip, port, rtp, info->codec, & sid);
 
     ASSERT(0); // you can't leave
-    delete codec; // etc.
 }
 
 void run_server(struct ServerDesc *info)

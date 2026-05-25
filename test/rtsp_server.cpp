@@ -29,9 +29,15 @@ public:
     }
 };
 
+static struct PcmConfig pcm_config = {
+    .bits = 16,
+    .chans = 2,
+    .freq = 48000,
+};
+
 TEST(RtspServer, Test)
 {
-    AudioCodec *codec = create_pcm(16, 2, 48000);
+    AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
 
     Test_1kHz_Source source(& rtp);

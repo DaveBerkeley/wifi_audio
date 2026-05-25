@@ -14,15 +14,21 @@ using namespace panglos;
 #include "i2s.h"
 #include "server.h"
 #include "esp32/init.h"
+#include "audio_codec.h"
 
-static bool rtp_init(void *, Event *, Event::Queue *)
+static struct ServerDesc info = {
+    .ip = "0.0.0.0",
+    .rtsp_port = 554,
+    .rtp_ports = { 6000, 6001, },
+};
+
+static bool rtp_init(void *arg, Event *, Event::Queue *)
 {
     PO_DEBUG("");
-    static struct ServerDesc info = {
-        .ip = "0.0.0.0",
-        .rtsp_port = 554,
-        .rtp_ports = { 6000, 6001, },
-    };
+    ASSERT(arg);
+    AudioCodec *codec = (AudioCodec*) arg;
+    ASSERT(codec);
+    info.codec = codec;
     run_server(& info);
 
     CLI *cli = (CLI*) Objects::objects->get("cli");
@@ -35,12 +41,14 @@ static bool rtp_init(void *, Event *, Event::Queue *)
     return false; // INIT handlers must return false so multiple handlers can be run
 }
 
-void board_init(int sck, int ws, int sd)
+void board_init(int sck, int ws, int sd, AudioCodec *codec)
 {
     PO_DEBUG("");
 
 #if 1
-    I2S *i2s = I2S::create(sck, ws, sd);
+    ASSERT(codec);
+    // TODO : get the endian order configured!!!!
+    I2S *i2s = I2S::create(sck, ws, sd, 48000, !codec->network_order());
     ASSERT(i2s);
     Objects::objects->add("i2s", i2s);
 #endif
@@ -50,7 +58,7 @@ void board_init(int sck, int ws, int sd)
         EventHandler::add_handler(Event::INIT, net_cli_init, 0);
     }
 
-    EventHandler::add_handler(Event::INIT, rtp_init, 0);    
+    EventHandler::add_handler(Event::INIT, rtp_init, codec);    
 }
 
 //  FIN

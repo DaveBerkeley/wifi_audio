@@ -86,6 +86,8 @@ public:
     int send(const uint8_t *data, size_t len);
     
     panglos::Socket *get_socket() { return socket; }
+
+    // statistics
     int get_num_packets() { return num_packets; }
     int get_num_errors() { return num_errors; }
 

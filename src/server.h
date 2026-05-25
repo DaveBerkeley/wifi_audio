@@ -1,11 +1,14 @@
 
 #pragma once
 
+class AudioCodec;
+
 struct ServerDesc
 {
     const char *ip;
     int rtsp_port;
     int rtp_ports[2];
+    AudioCodec *codec;
 };
 
 void run_server(struct ServerDesc *);

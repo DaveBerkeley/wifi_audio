@@ -24,6 +24,7 @@
 #include "board.h"
 
 #include "esp32/init.h"
+#include "audio_codec.h"
 
 using namespace panglos;
 
@@ -51,9 +52,16 @@ static Device _board_devs[] = {
     Device(0, 0, 0, 0, 0),
 };
 
+static struct PcmConfig codic_pcm = {
+    .bits = 16,
+    .chans = 2,
+    .freq = 48000,
+};
+
 void board_init()
 {
-    board_init(SCK, WS, SD);
+    AudioCodec *codec = AudioCodec::create(& codic_pcm);
+    board_init(SCK, WS, SD, codec);
 
 #if defined(RGB)
     int num = 2;
