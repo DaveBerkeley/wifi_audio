@@ -17,6 +17,7 @@ class OpusCodec : public AudioCodec
     void make_sdp_fmt()
     {
         const char *fmt = 
+            "k=clear: Opus Encoder\r\n"
             "v=0\r\n" // protocol version
             "o=- %%d %%d IN IP4 %%s\r\n" // session_id, session_version, ip_addr
             "s=Audio Stream\r\n"
@@ -38,6 +39,10 @@ class OpusCodec : public AudioCodec
 
     virtual const char *get_sdp_fmt() override
     {
+        if (!sdp_fmt)
+        {
+            make_sdp_fmt();
+        }
         ASSERT(sdp_fmt);
         return sdp_fmt;
     }
@@ -57,23 +62,36 @@ class OpusCodec : public AudioCodec
         return false; // requires I2S data to be swapped
     }
 
+    void error(int code, const char *text)
+    {
+        PO_ERROR("%s %s", text, opus_strerror(code));
+    }
+
 public:
-    OpusCodec()
+    OpusCodec(struct OpusConfig *config)
     :   encoder(0),
         sdp_fmt(0)
     {
-#if 1
-        int error;
-        encoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, & error);
-        if (error != OPUS_OK)
+        int err;
+        encoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, & err);
+        if (err != OPUS_OK)
         {
-            PO_ERROR("opus_encoder_create() %s", opus_strerror(error));
+            error(err, "opus_encoder_create()");
             return;
         }
 
-        opus_encoder_ctl(encoder, OPUS_SET_BITRATE(96000));
-        opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(8));
-#endif
+        err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(config->bit_rate));
+        if (err != OPUS_OK)
+        {
+            error(err, "opus_encoder_ctl(OPUS_SET_BITRATE)");
+            return;
+        }
+        err = opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(config->complexity));
+        if (err != OPUS_OK)
+        {
+            error(err, "opus_encoder_ctl(OPUS_SET_COMPLEXITY)");
+            return;
+        }
     }
 
     ~OpusCodec()
@@ -86,9 +104,10 @@ public:
 AudioCodec *AudioCodec::create(struct OpusConfig *config)
 {
     ASSERT(config);
-    ASSERT(config->freq == 48000);
-    ASSERT(config->chans == 2);
-    return new OpusCodec;
+    PO_DEBUG("Opus codec. bit_rate=%d complexity=%d", config->bit_rate, config->complexity);
+    ASSERT((config->bit_rate >= 6000) && (config->bit_rate <= 510000));
+    ASSERT((config->complexity >= 0) && (config->complexity < 11));
+    return new OpusCodec(config);
 }
 
 //  FIN

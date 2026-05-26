@@ -14,6 +14,7 @@ class PcmCodec : public AudioCodec
     void make_sdp_fmt(uint32_t bits, uint32_t chans, uint32_t freq)
     {
         const char *fmt = 
+            "k=clear: PCM Encoder\r\n"
             "v=0\r\n" // protocol version
             "o=- %%d %%d IN IP4 %%s\r\n" // session_id, session_version, ip_addr
             "s=Audio Stream\r\n"

@@ -6,20 +6,13 @@
 
 #include "panglos/debug.h"
 
-#include "cli/src/cli.h"
-
 #include "panglos/device.h"
 #include "panglos/object.h"
-#include "panglos/cli_net.h"
-#include "panglos/event_queue.h"
-
-#include "panglos/esp32/rmt_strip.h"
+#include "panglos/storage.h"
 
 #include "panglos/esp32/gpio.h"
 
-#include "panglos/app/event.h"
 #include "panglos/app/devices.h"
-#include "panglos/app/cli_server.h"
 
 #include "board.h"
 
@@ -52,23 +45,43 @@ static Device _board_devs[] = {
     Device(0, 0, 0, 0, 0),
 };
 
-#if 0
-static struct PcmConfig codec_config = {
+static struct PcmConfig pcm_config = {
     .bits = 16,
     .chans = 2,
     .freq = 48000,
 };
-#else
-static struct OpusConfig codec_config = {
-    .bits = 16,
-    .chans = 2,
-    .freq = 48000,
+
+static struct OpusConfig opus_config = {
+    .bit_rate = 96000,
+    .complexity = 8,
 };
-#endif
 
 void board_init()
 {
-    AudioCodec *codec = AudioCodec::create(& codec_config);
+    AudioCodec *codec = 0;
+
+    Storage db("app");
+
+    char name[64];
+    size_t size = sizeof(name);
+    if (db.get("codec", name, & size))
+    {
+        if (!strcmp("opus", name))
+        {
+            codec = AudioCodec::create(& opus_config);
+        }
+        else if (!strcmp("pcm", name))
+        {
+            codec = AudioCodec::create(& pcm_config);
+        }
+    }
+
+    if (!codec)
+    {
+        PO_INFO("Creating default codec");
+        codec = AudioCodec::create(& pcm_config);
+    }
+
     board_init(SCK, WS, SD, codec);
 
 #if defined(RGB)

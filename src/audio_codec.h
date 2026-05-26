@@ -14,10 +14,8 @@ struct PcmConfig
 
 struct OpusConfig
 {
-    // TODO 
-    uint32_t bits;
-    uint32_t chans;
-    uint32_t freq;
+    uint32_t bit_rate;
+    uint32_t complexity;
 };
 
     /*
