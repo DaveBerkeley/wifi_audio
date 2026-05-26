@@ -17,6 +17,13 @@ class _I2S : public I2S
 {
     i2s_chan_handle_t handle;
 
+    bool error(const char *text, int err)
+    {
+        if (err == ESP_OK) return false;
+        PO_ERROR("%s '%s' %d", lut(err_lut, err), err);
+        return true;
+    }
+
 public:
     _I2S() { }
 
@@ -33,11 +40,8 @@ public:
         };
 
         esp_err_t err = i2s_new_channel(& chan_cfg, 0, & handle);
-        if (err != ESP_OK)
-        {
-            PO_ERROR("i2s_new_channel()");
+        if (error("i2s_new_channel()", err))
             return false;
-        }
 
         // I2S Standard Mode Configuration (handles protocol, clocks, and data format)
         i2s_std_config_t std_cfg = {
@@ -62,18 +66,12 @@ public:
 
         // Apply the I2S configuration to the channel
         err = i2s_channel_init_std_mode(handle, & std_cfg);
-        if (err != ESP_OK)
-        {
-            PO_ERROR("i2s_channel_init_std_mode()");
+        if (error("i2s_channel_init_std_mode()", err))
             return false;
-        }
 
         err = i2s_channel_enable(handle);
-        if (err != ESP_OK)
-        {
-            PO_ERROR("i2s_channel_enable()");
+        if (error("i2s_channel_enable()", err))
             return false;
-        }
 
         return true;
     }
@@ -87,11 +85,9 @@ public:
         const int TIMEOUT_MS = -1; // forever
         //const int TIMEOUT_MS = 1000;
         esp_err_t err = i2s_channel_read(handle, dest, size, & bytes_read, TIMEOUT_MS);
-        if (err != ESP_OK)
-        {
-            PO_ERROR("i2s_channel_read() err=%d %s", err, lut(err_lut, err));
+        if (error("i2s_channel_read()", err))
             return 0;
-        }
+
         return bytes_read;
     }
 };

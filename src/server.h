@@ -11,6 +11,7 @@ struct ServerDesc
     AudioCodec *codec;
 };
 
+void _server(void *);
 void run_server(struct ServerDesc *);
 
 class CLI;

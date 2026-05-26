@@ -6,6 +6,7 @@ files = [
     'src/utils.cpp',
     'src/audio_codec_pcm.cpp',
     'src/audio_codec_opus.cpp',
+    'src/server.cpp',
 
     'test/main.cpp',
     'test/storage.cpp',
@@ -138,4 +139,5 @@ SConscript('third_party/SConscript', exports="tool_prefix cross_cflags")
 
 env = Environment(CFLAGS=cflags, CCFLAGS=ccflags, CXXFLAGS=cxxflags, LINKFLAGS=lflags, CPPPATH=cpppath, CC=cc, CXX=cxx)
 tdd = env.Program(target='tdd', source=files, LIBS=libs, LIBPATH=libpath)
+Default(tdd)
 

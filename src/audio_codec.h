@@ -14,8 +14,9 @@ struct PcmConfig
 
 struct OpusConfig
 {
-    uint32_t bit_rate;
-    uint32_t complexity;
+    uint32_t bit_rate;      // eg 96000 bps
+    uint32_t complexity;    // 0 .. 10
+    uint32_t packet_rate;   // in ms { 3 (2.5), 5, 10, 20, 40, 60, 120 }
 };
 
     /*
@@ -31,6 +32,11 @@ public:
     virtual const char *name() = 0;
     virtual int get_payload_type() = 0;
     virtual bool network_order() = 0;
+    virtual size_t samples_per_packet() = 0;
+    virtual size_t num_chans() = 0;
+    virtual size_t data_size() = 0;
+    virtual size_t max_payload_size() = 0;
+    virtual size_t process(const uint8_t *src, size_t ibytes, uint8_t *dst, size_t obytes) = 0;
 
     static AudioCodec *create(struct PcmConfig *);
     static AudioCodec *create(struct OpusConfig *);

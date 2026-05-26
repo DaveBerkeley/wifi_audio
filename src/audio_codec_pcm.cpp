@@ -54,6 +54,34 @@ class PcmCodec : public AudioCodec
     {
         return true; // keep I2S order
     }
+
+    virtual size_t samples_per_packet() override
+    {
+        return 360; // gives a packet size < max UDP size
+    }
+
+    virtual size_t data_size() override
+    {
+        return sizeof(int16_t);
+    }
+
+    virtual size_t num_chans() override
+    {
+        return 2;
+    }
+
+    virtual size_t max_payload_size() override
+    {
+        return samples_per_packet() * num_chans() * sizeof(int16_t);
+    }
+
+    virtual size_t process(const uint8_t *src, size_t ibytes, uint8_t *dst, size_t obytes) override
+    {
+        ASSERT(ibytes <= obytes);
+        memcpy(dst, src, ibytes);
+        return ibytes;
+    }
+
 public:
     PcmCodec(uint32_t bits, uint32_t chans, uint32_t freq)
     :   sdp_fmt(0)

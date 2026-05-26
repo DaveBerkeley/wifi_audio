@@ -129,13 +129,11 @@ class RTP_Engine
     uint32_t timestamp;
 
 public:
-    // 360 samples gives a 1496 byte packet, small enough to avoid fragmentation.
-    const size_t num_samples = 360;
 
     struct Block
     {
         struct RTP_Header *packet;
-        size_t samples;
+        size_t bytes;
 
         struct Block *next;
         static Block **get_next(struct Block *b) { return & b->next; }
@@ -154,9 +152,12 @@ public:
     void play(RTP_Client *);
     void remove(RTP_Client *);
 
-    int send(struct Block *block);
+    int send(struct Block *block, size_t bytes, size_t samples);
     struct Block *get_free() { return blocks.pop(mutex); }
     void put_free(struct Block *b) { blocks.push(b, mutex); }
+
+    AudioCodec *get_codec() { return codec; }
+    Allocator *get_allocator() { return allocator; }
 
     size_t rx_bytes();
 
@@ -165,6 +166,6 @@ public:
     RTP_Client *get_client(int idx);
 };
 
-void make_1kHz(RTP_Engine *rtp, int gain);
+//void make_1kHz(RTP_Engine *rtp, int gain);
 
 //  FIN

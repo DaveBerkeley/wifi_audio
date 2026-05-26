@@ -40,7 +40,7 @@ public:
 
 #define CPU_CORE 0 // -1 for "no affinity"
 
-static void server(void *arg)
+void _server(void *arg)
 {
     PO_DEBUG("");
 
@@ -49,18 +49,15 @@ static void server(void *arg)
     ASSERT(info->codec);
     PO_DEBUG("codec=%s", info->codec->name());
 
-    PO_DEBUG("RTP_Engine(%d,%d)", info->rtp_ports[1], info->rtp_ports[1]);
-    RTP_Engine *rtp = new RTP_Engine(info->codec, info->rtp_ports[1], info->rtp_ports[1], 2);
+    const int num_buffers = 2;
+    PO_DEBUG("RTP_Engine(%d,%d,nbuffs=%d)", info->rtp_ports[1], info->rtp_ports[1], num_buffers);
+    RTP_Engine *rtp = new RTP_Engine(info->codec, info->rtp_ports[1], info->rtp_ports[1], num_buffers);
     Objects::objects->add("rtp", rtp);
 
     AudioSource *src = (I2S*) Objects::objects->get("i2s");
-    if (!src)
-    {
-        static Test_1kHz_Source test(rtp);
-        src = & test;
-    }
+    ASSERT(src);
 
-    Thread *thread = Thread::create("rtp");
+    Thread *thread = Thread::create("rtp"); // , 6000);
     static struct AudioCopy ac = { .src = src, .dst = rtp };
     thread->start(run_audio_copy, & ac, CPU_CORE);
 
@@ -78,7 +75,7 @@ void run_server(struct ServerDesc *info)
 {
     PO_DEBUG("");
     Thread *thread = Thread::create("rtsp");
-    thread->start(server, info, CPU_CORE);
+    thread->start(_server, info, CPU_CORE);
 }
 
     /*

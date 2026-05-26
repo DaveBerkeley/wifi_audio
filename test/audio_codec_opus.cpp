@@ -5,9 +5,9 @@
 
 static struct OpusConfig config
 {
-    .bits = 16,
-    .chans = 2,
-    .freq = 48000,
+    .bit_rate = 96000,
+    .complexity = 8,
+    .packet_rate = 20,
 };
 
 TEST(Opus, Test)

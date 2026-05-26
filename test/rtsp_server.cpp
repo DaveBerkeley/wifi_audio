@@ -1,9 +1,12 @@
 
+#include <math.h>
+
 #include <gtest/gtest.h>
 
 #include "panglos/debug.h"
 #include "panglos/thread.h"
 #include "panglos/time.h"
+#include "panglos/object.h"
 
 using namespace panglos;
 
@@ -12,8 +15,53 @@ using namespace panglos;
 #include "rtsp_server.h"
 #include "rtp.h"
 #include "i2s.h"
-#include "utils.h"
+#include "server.h"
 #include "audio_codec.h"
+
+class TestSource : public AudioSource
+{
+    int period; // ms
+    uint16_t *samples;
+
+    void init(int gain)
+    {
+        PO_DEBUG("");
+
+        size_t n_samples = period * 48;
+        samples = new uint16_t[n_samples*2];
+        for (uint16_t i = 0; i < n_samples; i++)
+        {
+            // generate 1kHz sine wave. 48kHz sample rate, 48 samples per cycle
+            const int iphase = i % 48;
+            double phase = (iphase * M_PI * 2) / 48;
+            const double sine = sin(phase);
+            int16_t sample = (int16_t)(gain * sine);
+            sample = ntohs(sample);
+            samples[i*2] = sample;
+            samples[(i*2)+1] = sample;
+        }
+    }
+
+public:
+    TestSource(int period_ms)
+    :   period(period_ms),
+        samples(0)
+    {
+        init(0x1000);
+    }
+
+    ~TestSource()
+    {
+        delete[] samples;
+    }
+
+    virtual size_t read(void *dest, size_t bytes) override
+    {
+        memcpy(dest, samples, bytes);
+        Time::msleep(period);
+        return bytes;
+    }
+};
 
     /*
      *
@@ -37,24 +85,36 @@ static struct PcmConfig pcm_config = {
 
 TEST(RtspServer, Test)
 {
+    Objects::objects = Objects::create();
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
 
-    Test_1kHz_Source source(& rtp);
+    TestSource source(20);
+    Objects::objects->add("i2s", & source);
 
-    Thread *thread = Thread::create("audio");
-    static bool dead = false;
-    struct AudioCopy ac = { .src = & source, .dst = & rtp, .dead = & dead };
-    thread->start(run_audio_copy, & ac);
+    //Thread *thread = Thread::create("audio");
+
+    struct ServerDesc info = {
+        .ip = "0.0.0.0", 
+        .rtsp_port = 8554, 
+        .rtp_ports = { 600, 6001 },
+        .codec = codec,
+    };
+
+    _server(& info);
+
+    //thread->start((void (*)(void*)) run_server, & info);
 
     // blocking call to run server
-    SID sid;
-    const char *ip = "0.0.0.0"; // all interfaces
-    rtsp_server(ip, "8554", & rtp, codec, & sid);
+    //SID sid;
+    //const char *ip = "0.0.0.0"; // all interfaces
+    //rtsp_server(ip, "8554", & rtp, codec, & sid);
 
-    thread->join();
-    delete thread;
+    //thread->join();
+    //delete thread;
     delete codec;
+    delete Objects::objects;
+    Objects::objects = 0;
 }
 
 //  FIN

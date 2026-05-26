@@ -12,12 +12,29 @@
 #include "i2s.h"
 #include "rtp.h"
 #include "utils.h"
+#include "audio_codec.h"
 
-void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *)
+void audio_copy(AudioSource *src, RTP_Engine *rtp)
 {
+    ASSERT(src);
+    ASSERT(rtp);
+    AudioCodec *codec = rtp->get_codec();
+    ASSERT(codec);
+
+    // allocate a read block for the source data
+    size_t ibuff_size = codec->samples_per_packet() * codec->num_chans() * codec->data_size();
+    Allocator *allocator = rtp->get_allocator();
+    ASSERT(allocator);
+    uint8_t *idata = (uint8_t *) allocator->malloc(ibuff_size);
+    ASSERT(idata);
+
+    PO_DEBUG("block_size=%d", (int) rtp->rx_bytes());
     //while (!*dead)
     while (true)
     {
+        // blocking read on source
+        src->read(idata, ibuff_size);
+
         // get the next block RAM
         RTP_Engine::Block *block = rtp->get_free();
         if (!block)
@@ -26,18 +43,23 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *)
             panglos::Time::msleep(2);
             continue;
         }
-        // blocking read on source
-        uint8_t *data = block->packet->get_audio();
-        src->read(data, rtp->rx_bytes());
+        
+        // compress the data
+        uint8_t *odata = block->packet->get_audio();
+        size_t sz = codec->process(idata, ibuff_size, odata, rtp->rx_bytes());
         // send the RTP data
-        block->samples = rtp->rx_bytes() / (2 * sizeof(int16_t));
-        rtp->send(block);
+        rtp->send(block, sz, codec->samples_per_packet());
     }
+
+    PO_DEBUG("");
+    allocator->free(idata);
 }
 
     /*
      *
      */
+
+#if 0
 
 #include <math.h>
 
@@ -95,11 +117,13 @@ Test_1kHz_Source::Test_1kHz_Source(RTP_Engine *rtp)
     make_1kHz(rtp, 0x1000);
 }
 
+#endif
+
 void run_audio_copy(void *arg)
 {
     ASSERT(arg);
     AudioCopy *ac = (AudioCopy *) arg;
-    audio_copy(ac->src, ac->dst, ac->dead);
+    audio_copy(ac->src, ac->dst);
 }
 
 //  FIN

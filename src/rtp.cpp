@@ -76,13 +76,14 @@ RTP_Engine::RTP_Engine(AudioCodec *_codec, int rtp, int rtcp, int num_buffers, A
     timestamp(0),
     blocks(Block::get_next)
 {
+    ASSERT(codec);
     allocator = allocator ? allocator : Allocator::system();
     mutex = panglos::Mutex::create();
 
     // TODO : assumes zero CSRC and Extension blocks in header
     for (int idx = 0; idx < num_buffers; idx++)
     {
-        size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * num_samples);
+        size_t packet_size = sizeof(RTP_Header) + codec->max_payload_size();
         uint8_t *data = (uint8_t*) allocator->malloc(packet_size);
         memset(data, 0, packet_size);
         RTP_Header *packet = (RTP_Header*) data;
@@ -115,7 +116,8 @@ RTP_Engine::~RTP_Engine()
 
 size_t RTP_Engine::rx_bytes()
 {
-    return num_samples * 2 * sizeof(uint16_t);
+    ASSERT(codec);
+    return codec->samples_per_packet() * codec->num_chans() * sizeof(uint16_t);
 }
 
 void RTP_Engine::get_server_ports(int *a, int *b)
@@ -204,19 +206,22 @@ static void TRACE()
 
 #endif
 
-int RTP_Engine::send(struct Block *block)
+int RTP_Engine::send(struct Block *block, size_t bytes, size_t samples)
 {
     TRACE();
 
-    if (block->samples > num_samples) return false;
-    if (block->samples <= 0) return false;
+    if (block->bytes < bytes) return false; // not enough space for payload
+    if (block->bytes <= 0) return false;
     // increment the seq id
     block->packet->set_seq(packet_seq++);
     block->packet->set_timestamp(timestamp);
-    timestamp += (int32_t) block->samples;
+    timestamp += (int32_t) samples;
+
     // send the packet to all the clients in PLAY state
-    size_t packet_size = sizeof(RTP_Header) + (sizeof(uint16_t) * 2 * block->samples);
-    struct Buffer params = { .data = (uint8_t*) block->packet, .size = packet_size };
+    struct Buffer params = {
+        .data = (uint8_t*) block->packet, 
+        .size = sizeof(RTP_Header) + bytes,
+    };
     playing.visit(send_packet, & params, mutex);
 
     // recyle the block
