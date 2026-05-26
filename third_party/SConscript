@@ -1,12 +1,27 @@
 import os
 from pathlib import Path
 
+Import("tool_prefix")
+Import("cross_cflags")
+
+tools = {
+    "CC"        : f"{tool_prefix}gcc",
+    "CXX"       : f"{tool_prefix}g++",
+    "LD"        : f"{tool_prefix}gcc",
+    "AR"        : f"{tool_prefix}ar",
+    "RANLIB"    : f"{tool_prefix}ranlib",
+    "AS"        : f"{tool_prefix}as",
+    "OBJCOPY"   : f"{tool_prefix}objcopy",
+    "OBJDUMP"   : f"{tool_prefix}objdump",
+    "SIZE"      : f"{tool_prefix}size",
+    "NM"        : f"{tool_prefix}nm",
+    "STRIP"     : f"{tool_prefix}strip",
+    "READELF"   : f"{tool_prefix}readelf",
+    "GDB"       : f"{tool_prefix}gdb",
+}
+
 # Environment setup with custom options
-env = Environment(
-    ENV=os.environ,
-    tools=['gcc', 'g++', 'ar', 'as'],
-    toolpath=[]
-)
+env = Environment(ENV=os.environ, **tools)
 
 # Allow command-line overrides
 opts = Variables()
@@ -16,7 +31,7 @@ opts.Add(PathVariable('PREFIX', 'Installation prefix', '/usr/local'))
 opts.Add(BoolVariable('fixed_point', 'Use fixed-point implementation (for embedded)', 1))
 opts.Add(BoolVariable('float_approx', 'Use float approximations', 0))
 opts.Add(BoolVariable('custom_modes', 'Enable custom modes', 1))
-opts.Add(BoolVariable('asm', 'Enable assembly optimizations', 1))
+opts.Add(BoolVariable('asm', 'Enable assembly optimizations', 0))
 opts.Add(BoolVariable('rtcd', 'Enable runtime CPU detection', 1))
 opts.Add('EXTRA_CFLAGS', 'Additional C compiler flags', '')
 
@@ -47,12 +62,14 @@ base_cflags = [
     '-std=c99',  # Opus requires C99
     '-DHAVE_CONFIG_H',
     '-DUSE_ALLOCA',
-]
+] + cross_cflags
 
 # Fixed-point configuration (critical for ESP32)
 base_cflags.append('-DFIXED_POINT=1')
 if env['float_approx']:
     base_cflags.append('-DFLOAT_APPROX=1')
+
+base_cflags.append('-DDISABLE_FLOAT_API=1')
 
 # Feature flags
 if env['custom_modes']:
@@ -130,6 +147,7 @@ opus_sources = [
     OPUS_SRC_DIR + '/src/analysis.c',
     OPUS_SRC_DIR + '/src/mlp.c',
     OPUS_SRC_DIR + '/src/mlp_data.c',
+    OPUS_SRC_DIR + '/src/extensions.c',
     
     # CELT files
     OPUS_SRC_DIR + '/celt/bands.c',
@@ -207,27 +225,35 @@ opus_sources = [
     OPUS_SRC_DIR + '/silk/tables_pitch_lag.c',
     OPUS_SRC_DIR + '/silk/tables_pulses_per_block.c',
     OPUS_SRC_DIR + '/silk/VAD.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_apply_sine_window_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_corrMatrix_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_energy_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_LPC_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_LTP_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_pitch_lags_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_find_pred_coefs_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_levinsondurbin_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LPC_analysis_filter_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LPC_inv_pred_gain_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LTP_analysis_filter_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_LTP_scale_ctrl_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_noise_shape_analysis_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_process_gains_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_regularize_correlations_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_residual_energy_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_scale_copy_vector_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_scale_vector_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_schur_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_solve_LS_FLP.c',
-    #OPUS_SRC_DIR + '/silk/float/SKP_Silk_warped_autocorrelation_FLP.c',
+
+    OPUS_SRC_DIR + '/silk/interpolate.c',
+    OPUS_SRC_DIR + '/silk/lin2log.c',
+    OPUS_SRC_DIR + '/silk/log2lin.c',
+    OPUS_SRC_DIR + '/silk/PLC.c',
+    OPUS_SRC_DIR + '/silk/bwexpander.c',
+    OPUS_SRC_DIR + '/silk/bwexpander_32.c',
+    OPUS_SRC_DIR + '/silk/NLSF2A.c',
+    OPUS_SRC_DIR + '/silk/ana_filt_bank_1.c',
+    OPUS_SRC_DIR + '/silk/NLSF_VQ.c',
+    OPUS_SRC_DIR + '/silk/A2NLSF.c',
+    OPUS_SRC_DIR + '/silk/LPC_fit.c',
+    OPUS_SRC_DIR + '/silk/inner_prod_aligned.c',
+    OPUS_SRC_DIR + '/silk/control_audio_bandwidth.c',
+    OPUS_SRC_DIR + '/silk/decode_indices.c',
+    OPUS_SRC_DIR + '/silk/decode_pulses.c',
+    OPUS_SRC_DIR + '/silk/decode_frame.c',
+    OPUS_SRC_DIR + '/silk/decode_core.c',
+    OPUS_SRC_DIR + '/silk/decode_parameters.c',
+    OPUS_SRC_DIR + '/silk/decode_pitch.c',
+    OPUS_SRC_DIR + '/silk/shell_coder.c',
+    OPUS_SRC_DIR + '/silk/decoder_set_fs.c',
+    OPUS_SRC_DIR + '/silk/VQ_WMat_EC.c',
+    OPUS_SRC_DIR + '/silk/biquad_alt.c',
+    OPUS_SRC_DIR + '/silk/NSQ.c',
+    OPUS_SRC_DIR + '/silk/NSQ_del_dec.c',
+    OPUS_SRC_DIR + '/silk/control_SNR.c',
+    OPUS_SRC_DIR + '/silk/check_control_input.c',
+
     OPUS_SRC_DIR + '/silk/fixed/apply_sine_window_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/autocorr_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/burg_modified_FIX.c',
@@ -241,7 +267,7 @@ opus_sources = [
     OPUS_SRC_DIR + '/silk/fixed/k2a_Q16_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/LTP_analysis_filter_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/LTP_scale_ctrl_FIX.c',
-    OPUS_SRC_DIR + '/silk/fixed/main_FIX.h',
+    #OPUS_SRC_DIR + '/silk/fixed/main_FIX.h',
     OPUS_SRC_DIR + '/silk/fixed/noise_shape_analysis_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/pitch_analysis_core_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/process_gains_FIX.c',
@@ -250,7 +276,7 @@ opus_sources = [
     OPUS_SRC_DIR + '/silk/fixed/residual_energy_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/schur64_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/schur_FIX.c',
-    OPUS_SRC_DIR + '/silk/fixed/structs_FIX.h',
+    #OPUS_SRC_DIR + '/silk/fixed/structs_FIX.h',
     OPUS_SRC_DIR + '/silk/fixed/vector_ops_FIX.c',
     OPUS_SRC_DIR + '/silk/fixed/warped_autocorrelation_FIX.c',
 ]
@@ -264,12 +290,25 @@ else:
     # The code above already includes fixed-point files when configured
     pass
 
+if 0:
+    # Build objects specifically for the shared library
+    shared_objects = []
+    for src in opus_sources:
+        obj = env.SharedObject(src)
+        shared_objects.append(obj)
+
+    # Build the shared library using these shared objects
+    libopus = env.SharedLibrary(target='opus_fixed', source=shared_objects)
+
+    Return('libopus')
+
 # Build static library
 libopus = env.StaticLibrary(
     target=os.path.join(BUILD_DIR, 'libopus'),
     source=opus_sources
 )
+Default(libopus)
 
-Return('libopus')
+#Return('libopus')
 
 #   FIN

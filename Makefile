@@ -50,9 +50,9 @@ cleanx:
 	find .pio -name "*.o" | grep panglos | xargs rm
 
 dump:
-	#~/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
+	~/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 	#~/.platformio/packages/toolchain-xtensa-esp32s2/bin/xtensa-esp32s2-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
-	~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
+	#~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 
 tdd:
 	scons
@@ -67,5 +67,10 @@ clang: $(APP)
 
 gdb:
 	/home/dave/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32c3-builtin.cfg
+
+opus:  test/opus.cpp third_party/build/libopus.a Makefile
+	gcc test/opus.cpp -I third_party/opus/include/ -DUSE_ALLOCA third_party/build/libopus.a -lm -o opus
+	#gcc test/opus.cpp -I third_party/opus/include/ -DUSE_ALLOCA -lm -lopus -o opus
+	./opus
 
 #	FIN

@@ -7,9 +7,9 @@ class AudioCodec;
 
 struct PcmConfig
 {
-    uint32_t bits;
-    uint32_t chans;
-    uint32_t freq;
+    uint32_t bits;  //  eg 16
+    uint32_t chans; //  eg 2
+    uint32_t freq;  //  eg 48000
 };
 
 struct OpusConfig

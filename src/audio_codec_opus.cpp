@@ -62,7 +62,7 @@ public:
     :   encoder(0),
         sdp_fmt(0)
     {
-#if 0
+#if 1
         int error;
         encoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, & error);
         if (error != OPUS_OK)
@@ -78,7 +78,7 @@ public:
 
     ~OpusCodec()
     {
-        //opus_encoder_destroy(encoder);
+        opus_encoder_destroy(encoder);
         free(sdp_fmt);
     }
 };

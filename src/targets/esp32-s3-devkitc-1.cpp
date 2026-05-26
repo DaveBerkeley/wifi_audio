@@ -52,15 +52,23 @@ static Device _board_devs[] = {
     Device(0, 0, 0, 0, 0),
 };
 
-static struct PcmConfig codic_pcm = {
+#if 0
+static struct PcmConfig codec_config = {
     .bits = 16,
     .chans = 2,
     .freq = 48000,
 };
+#else
+static struct OpusConfig codec_config = {
+    .bits = 16,
+    .chans = 2,
+    .freq = 48000,
+};
+#endif
 
 void board_init()
 {
-    AudioCodec *codec = AudioCodec::create(& codic_pcm);
+    AudioCodec *codec = AudioCodec::create(& codec_config);
     board_init(SCK, WS, SD, codec);
 
 #if defined(RGB)

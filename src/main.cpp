@@ -130,7 +130,6 @@ static bool init_devices()
     start_network();
 
     const bool has_net = Objects::objects->get("net");
-#endif
 
     // Start mDNS?
     if (has_net)
@@ -144,6 +143,7 @@ static bool init_devices()
             Network::start_mdns(strdup(name));
         }
     }
+#endif
     
     board_init();
     return true;
