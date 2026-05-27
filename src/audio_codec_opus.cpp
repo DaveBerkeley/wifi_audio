@@ -58,7 +58,7 @@ class OpusCodec : public AudioCodec
         return "Opus";
     }
 
-    virtual int get_payload_type() override
+    virtual uint8_t get_payload_type() override
     {
         return 97;
     }
@@ -94,9 +94,9 @@ class OpusCodec : public AudioCodec
         PO_ERROR("%s %s", text, opus_strerror(code));
     }
 
-    virtual size_t process(const uint8_t *src, size_t ibytes, uint8_t *dst, size_t obytes) override
+    virtual size_t process(const uint8_t *src, size_t samples, uint8_t *dst, size_t obytes) override
     {
-        opus_int32 err = opus_encode(encoder, (const opus_int16*) src, (int) ibytes, dst, (int) obytes);
+        opus_int32 err = opus_encode(encoder, (const opus_int16*) src, (int) samples, dst, (int) obytes);
         if (err <= 0)
         {
             error(err, "opus_encoder_create()");

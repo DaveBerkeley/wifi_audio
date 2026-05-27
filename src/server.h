@@ -2,6 +2,7 @@
 #pragma once
 
 class AudioCodec;
+class Allocator;
 
 struct ServerDesc
 {
@@ -9,10 +10,12 @@ struct ServerDesc
     int rtsp_port;
     int rtp_ports[2];
     AudioCodec *codec;
+    Allocator *allocator;
 };
 
 void _server(void *);
-void run_server(struct ServerDesc *);
+
+void run_server_thread(struct ServerDesc *);
 
 class CLI;
 void add_rtp_commands(CLI *cli);

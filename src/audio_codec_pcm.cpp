@@ -45,7 +45,7 @@ class PcmCodec : public AudioCodec
 
     virtual const char *name() override { return "PCM"; }
 
-    virtual int get_payload_type() override
+    virtual uint8_t get_payload_type() override
     {
         return 96;
     }
@@ -75,11 +75,12 @@ class PcmCodec : public AudioCodec
         return samples_per_packet() * num_chans() * sizeof(int16_t);
     }
 
-    virtual size_t process(const uint8_t *src, size_t ibytes, uint8_t *dst, size_t obytes) override
+    virtual size_t process(const uint8_t *src, size_t samples, uint8_t *dst, size_t obytes) override
     {
-        ASSERT(ibytes <= obytes);
-        memcpy(dst, src, ibytes);
-        return ibytes;
+        const size_t size = samples * num_chans() * data_size();
+        ASSERT(size <= obytes);
+        memcpy(dst, src, size);
+        return size;
     }
 
 public:

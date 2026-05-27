@@ -30,13 +30,13 @@ public:
 
     virtual const char *get_sdp_fmt() = 0;
     virtual const char *name() = 0;
-    virtual int get_payload_type() = 0;
+    virtual uint8_t get_payload_type() = 0;
     virtual bool network_order() = 0;
     virtual size_t samples_per_packet() = 0;
     virtual size_t num_chans() = 0;
     virtual size_t data_size() = 0;
     virtual size_t max_payload_size() = 0;
-    virtual size_t process(const uint8_t *src, size_t ibytes, uint8_t *dst, size_t obytes) = 0;
+    virtual size_t process(const uint8_t *src, size_t samples, uint8_t *dst, size_t obytes) = 0;
 
     static AudioCodec *create(struct PcmConfig *);
     static AudioCodec *create(struct OpusConfig *);

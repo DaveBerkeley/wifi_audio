@@ -54,10 +54,10 @@ class SystemAllocator : public Allocator
     }
 };
 
-static SystemAllocator allocator;
-
 Allocator *Allocator::system()
 {
+    static SystemAllocator allocator;
+
     return & allocator;
 }
 
@@ -90,7 +90,7 @@ RTP_Engine::RTP_Engine(AudioCodec *_codec, int rtp, int rtcp, int num_buffers, A
 
         // initialise each RTP packet
         packet->set_version(2);
-        packet->set_payload(get_payload_type());
+        packet->set_payload(codec->get_payload_type());
         packet->set_timestamp(0);
         packet->set_ssrc(0);
 
@@ -98,6 +98,7 @@ RTP_Engine::RTP_Engine(AudioCodec *_codec, int rtp, int rtcp, int num_buffers, A
         struct Block *block = new struct Block;
         block->next = 0;
         block->packet = packet;
+        block->max_payload = codec->max_payload_size();
         blocks.push(block, mutex);
     }
 }
@@ -117,20 +118,13 @@ RTP_Engine::~RTP_Engine()
 size_t RTP_Engine::rx_bytes()
 {
     ASSERT(codec);
-    return codec->samples_per_packet() * codec->num_chans() * sizeof(uint16_t);
+    return codec->samples_per_packet() * codec->num_chans() * codec->data_size();
 }
 
 void RTP_Engine::get_server_ports(int *a, int *b)
 {
     if (a) *a = rtp_port;
     if (b) *b = rtcp_port;
-}
-
-uint8_t RTP_Engine::get_payload_type()
-{
-    // we map this to 16-bit PCM in the RSTP/SDP DESCRIBE Response
-    ASSERT(codec);
-    return (uint8_t) codec->get_payload_type();
 }
 
 void RTP_Engine::play(RTP_Client *client)
@@ -210,8 +204,8 @@ int RTP_Engine::send(struct Block *block, size_t bytes, size_t samples)
 {
     TRACE();
 
-    if (block->bytes < bytes) return false; // not enough space for payload
-    if (block->bytes <= 0) return false;
+    //PO_DEBUG("max_payload=%d bytes=%d", (int) block->max_payload, (int) bytes);
+    ASSERT(block->max_payload >= bytes); // not enough space for payload
     // increment the seq id
     block->packet->set_seq(packet_seq++);
     block->packet->set_timestamp(timestamp);

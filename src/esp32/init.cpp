@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "esp_heap_caps.h"
+
 #include "panglos/debug.h"
 
 #include "panglos/esp32/gpio.h"
@@ -19,6 +21,22 @@ using namespace panglos;
 #include "server.h"
 #include "esp32/init.h"
 #include "audio_codec.h"
+#include "rtp.h"
+
+class HeapAllocator : public Allocator
+{
+    virtual void* malloc(size_t bytes) override
+    {
+        const uint32_t caps = MALLOC_CAP_DMA | MALLOC_CAP_32BIT | MALLOC_CAP_INTERNAL;
+        const size_t  alignment = 4;
+        return heap_caps_aligned_alloc(alignment, bytes, caps);
+    }
+
+    virtual void free(void *data) override
+    {
+        heap_caps_free(data);
+    }
+};
 
 static struct ServerDesc info = {
     .ip = "0.0.0.0",
@@ -49,7 +67,8 @@ static bool rtp_init(void *arg, Event *, Event::Queue *)
     AudioCodec *codec = (AudioCodec*) arg;
     ASSERT(codec);
     info.codec = codec;
-    run_server(& info);
+    info.allocator = new HeapAllocator;
+    run_server_thread(& info);
 
     CLI *cli = (CLI*) Objects::objects->get("cli");
     ASSERT(cli);

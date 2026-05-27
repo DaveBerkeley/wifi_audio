@@ -29,6 +29,7 @@ class TestSource : public AudioSource
 
         size_t n_samples = period * 48;
         samples = new uint16_t[n_samples*2];
+        //memset(samples, 0, sizeof(uint16_t) * n_samples * 2);
         for (uint16_t i = 0; i < n_samples; i++)
         {
             // generate 1kHz sine wave. 48kHz sample rate, 48 samples per cycle
@@ -77,22 +78,27 @@ public:
     }
 };
 
-static struct PcmConfig pcm_config = {
+#if 0
+static struct PcmConfig codec_config = {
     .bits = 16,
     .chans = 2,
     .freq = 48000,
 };
+#else
+static struct OpusConfig codec_config = {
+    .bit_rate = 96000,
+    .complexity = 8,
+    .packet_rate = 20, // ms
+};
+#endif
 
 TEST(RtspServer, Test)
 {
     Objects::objects = Objects::create();
-    AudioCodec *codec = AudioCodec::create(& pcm_config);
-    RTP_Engine rtp(codec, 6000, 6001, 2);
+    AudioCodec *codec = AudioCodec::create(& codec_config);
 
     TestSource source(20);
     Objects::objects->add("i2s", & source);
-
-    //Thread *thread = Thread::create("audio");
 
     struct ServerDesc info = {
         .ip = "0.0.0.0", 
@@ -103,15 +109,6 @@ TEST(RtspServer, Test)
 
     _server(& info);
 
-    //thread->start((void (*)(void*)) run_server, & info);
-
-    // blocking call to run server
-    //SID sid;
-    //const char *ip = "0.0.0.0"; // all interfaces
-    //rtsp_server(ip, "8554", & rtp, codec, & sid);
-
-    //thread->join();
-    //delete thread;
     delete codec;
     delete Objects::objects;
     Objects::objects = 0;

@@ -133,7 +133,7 @@ public:
     struct Block
     {
         struct RTP_Header *packet;
-        size_t bytes;
+        size_t max_payload;
 
         struct Block *next;
         static Block **get_next(struct Block *b) { return & b->next; }
@@ -147,7 +147,6 @@ public:
     ~RTP_Engine();
 
     void get_server_ports(int *a, int *b);
-    uint8_t get_payload_type();
 
     void play(RTP_Client *);
     void remove(RTP_Client *);
