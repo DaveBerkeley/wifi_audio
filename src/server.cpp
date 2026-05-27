@@ -49,7 +49,7 @@ void _server(void *arg)
     ASSERT(info->codec);
     PO_DEBUG("codec=%s", info->codec->name());
 
-    const int num_buffers = 2;
+    const int num_buffers = 4;
     PO_DEBUG("RTP_Engine(%d,%d,nbuffs=%d)", info->rtp_ports[1], info->rtp_ports[1], num_buffers);
     RTP_Engine *rtp = new RTP_Engine(info->codec, info->rtp_ports[1], info->rtp_ports[1], num_buffers, info->allocator);
     Objects::objects->add("rtp", rtp);
@@ -57,8 +57,8 @@ void _server(void *arg)
     AudioSource *src = (I2S*) Objects::objects->get("i2s");
     ASSERT(src);
 
-    // The Opus encoder needs a lot of stack 32k+.
-    Thread *thread = Thread::create("rtp", 48000);
+    // The Opus encoder needs more stack
+    Thread *thread = Thread::create("rtp", 8000);
     static struct AudioCopy ac = { .src = src, .dst = rtp };
     thread->start(run_audio_copy, & ac, CPU_CORE);
 

@@ -141,6 +141,11 @@ void RTP_Engine::remove(RTP_Client *client)
         playing.remove(client, mutex);
 }
 
+bool RTP_Engine::has_clients()
+{
+    return playing.head;
+}
+
     /*
      *  RTP Packet transmit
      */

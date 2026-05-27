@@ -62,7 +62,9 @@ base_cflags = [
     '-Wno-maybe-uninitialized',
     '-std=c99',  # Opus requires C99
     '-DHAVE_CONFIG_H',
-    '-DUSE_ALLOCA',
+
+    #'-DUSE_ALLOCA', # requires a huge stack
+    '-DNONTHREADSAFE_PSEUDOSTACK',
 ] + cross_cflags
 
 # Fixed-point configuration (critical for ESP32)

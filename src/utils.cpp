@@ -30,12 +30,30 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp)
     ASSERT(idata);
     const size_t samples = codec->samples_per_packet();
 
+    const size_t max_read = src->max_read_bytes();
+    const size_t passes = (ibuff_size  + max_read - 1) / max_read;
+    PO_DEBUG("max_read=%d passes=%d", (int) max_read, (int) passes);
     PO_DEBUG("block_size=%d samples=%d", (int) rtp->rx_bytes(), (int) samples);
-    //while (!*dead)
+
     while (true)
     {
         // blocking read on source
-        src->read(idata, ibuff_size);
+        // use multiple passes until the whole buffer has been read
+        size_t total = 0;
+        while (total < ibuff_size)
+        {
+            size_t todo = ibuff_size - total;
+            size_t block = (todo > max_read) ? max_read : todo;
+            src->read(& idata[total], block);
+            total += block;
+            //PO_DEBUG("read bytes=%d total=%d", (int) block, (int) total);
+        }
+
+        if (!rtp->has_clients())
+        {
+            // no need to call the codec or send any RTP packets
+            continue;
+        }
 
         // get the next block RAM
         RTP_Engine::Block *block = rtp->get_free();
@@ -60,66 +78,6 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp)
     /*
      *
      */
-
-#if 0
-
-#include <math.h>
-
-#include "sockets.h"
-
-void make_1kHz(RTP_Engine *rtp, int gain)
-{
-    PO_DEBUG("");
-
-    size_t n_samples = rtp->num_samples * 2;
-    uint16_t *samples = new uint16_t[n_samples];
-    for (uint16_t i = 0; i < rtp->num_samples; i++)
-    {
-        // generate 1kHz sine wave. 48kHz sample rate, 48 samples per cycle
-        const int iphase = i % 48;
-        double phase = (iphase * M_PI * 2) / 48;
-        const double sine = sin(phase);
-        int16_t sample = (int16_t)(gain * sine);
-        sample = ntohs(sample);
-        samples[i*2] = sample;
-        samples[(i*2)+1] = sample;
-    }
-
-    // Get all the available blocks
-    RTP_Engine::Blocks blocks(RTP_Engine::Block::get_next);
-
-    while (true)
-    {
-        RTP_Engine::Block *block = rtp->get_free();
-        if (!block) break;
-        blocks.push(block, 0);
-    }
-
-    while (true)
-    {
-        RTP_Engine::Block *block = blocks.pop(0);
-        if (!block) break;
-        memcpy(block->packet->get_audio(), samples, rtp->rx_bytes());
-        rtp->put_free(block);        
-    }
-}
-
-#include "panglos/time.h"
-
-size_t Test_1kHz_Source::read(void *dest, size_t bytes)
-{
-    // Blocking read
-    UNUSED(dest);
-    panglos::Time::msleep(7);
-    return bytes;
-}
-
-Test_1kHz_Source::Test_1kHz_Source(RTP_Engine *rtp)
-{
-    make_1kHz(rtp, 0x1000);
-}
-
-#endif
 
 void run_audio_copy(void *arg)
 {

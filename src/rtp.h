@@ -150,6 +150,7 @@ public:
 
     void play(RTP_Client *);
     void remove(RTP_Client *);
+    bool has_clients();
 
     int send(struct Block *block, size_t bytes, size_t samples);
     struct Block *get_free() { return blocks.pop(mutex); }

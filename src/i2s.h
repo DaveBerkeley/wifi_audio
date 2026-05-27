@@ -7,6 +7,7 @@ public:
     virtual ~AudioSource() { }
     // blocking read
     virtual size_t read(void *dest, size_t bytes)  = 0;
+    virtual size_t max_read_bytes()  = 0;
 };
 
 class I2S : public AudioSource

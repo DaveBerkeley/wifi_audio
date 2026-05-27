@@ -22,15 +22,15 @@ class TestSource : public AudioSource
 {
     int period; // ms
     uint16_t *samples;
+    const int waveform_period = 48; // samples
+    Time::tick_t time;
 
     void init(int gain)
     {
         PO_DEBUG("");
 
-        size_t n_samples = period * 48;
-        samples = new uint16_t[n_samples*2];
-        //memset(samples, 0, sizeof(uint16_t) * n_samples * 2);
-        for (uint16_t i = 0; i < n_samples; i++)
+        samples = new uint16_t[waveform_period*2];
+        for (uint16_t i = 0; i < waveform_period; i++)
         {
             // generate 1kHz sine wave. 48kHz sample rate, 48 samples per cycle
             const int iphase = i % 48;
@@ -46,7 +46,8 @@ class TestSource : public AudioSource
 public:
     TestSource(int period_ms)
     :   period(period_ms),
-        samples(0)
+        samples(0),
+        time(0)
     {
         init(0x1000);
     }
@@ -58,9 +59,23 @@ public:
 
     virtual size_t read(void *dest, size_t bytes) override
     {
+        ASSERT(bytes <= max_read_bytes());
         memcpy(dest, samples, bytes);
-        Time::msleep(period);
+
+        Time::tick_t now = Time::get();
+        while (!Time::elapsed(time, 1))
+        {
+            Time::msleep(0);
+        }
+        time = now;
+
         return bytes;
+    }
+
+    virtual size_t max_read_bytes() override
+    {
+        // only enough data for 1 cycle of stereo 16-bit data 
+        return waveform_period * sizeof(int16_t) * 2; 
     }
 };
 
@@ -88,7 +103,7 @@ static struct PcmConfig codec_config = {
 static struct OpusConfig codec_config = {
     .bit_rate = 96000,
     .complexity = 8,
-    .packet_rate = 20, // ms
+    .packet_rate = 40, // ms
 };
 #endif
 

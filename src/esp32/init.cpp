@@ -53,7 +53,7 @@ static struct PcmConfig pcm_config = {
 static struct OpusConfig opus_config = {
     .bit_rate = 96000,
     .complexity = 8,
-    .packet_rate = 10, // ms
+    .packet_rate = 40, // ms
 };
 
 static bool rtp_init(void *arg, Event *, Event::Queue *)

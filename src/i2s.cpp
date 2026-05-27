@@ -76,20 +76,26 @@ public:
         return true;
     }
 
-    virtual size_t read(void *dest, size_t size) override
+    virtual size_t read(void *dest, size_t bytes) override
     {
-        //PO_DEBUG("");
-        ASSERT(size <= 4092); // Hard limit on DMA buffer size
+        ASSERT(bytes <= max_read_bytes());
         // Blocking Read
         size_t bytes_read;
         const int TIMEOUT_MS = -1; // forever
         //const int TIMEOUT_MS = 1000;
-        esp_err_t err = i2s_channel_read(handle, dest, size, & bytes_read, TIMEOUT_MS);
+        esp_err_t err = i2s_channel_read(handle, dest, bytes, & bytes_read, TIMEOUT_MS);
         if (error("i2s_channel_read()", err))
             return 0;
 
         return bytes_read;
     }
+
+    virtual size_t max_read_bytes() override
+    {
+        return 4064; // Hard limit on DMA buffer size, rounded down to 32-byte boundary
+        //return 4092; // Hard limit on DMA buffer size
+    }
+
 };
 
     /*
