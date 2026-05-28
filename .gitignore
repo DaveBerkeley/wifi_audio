@@ -3,6 +3,7 @@ CMakeLists.txt
 sdkconfig.*
 
 src/banner.cpp
+config.h
 
 .sconsign.dblite
 managed_components/
