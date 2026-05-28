@@ -15,7 +15,7 @@ I2S audio data can be received by the ESP32 and transmitted over WiFi.
 
 I've added an Opus audio encoder to send compressed stereo 16-bit 48kHz audio over an RTS stream.
 
-I handles multiple clients using my SocketServer class in panglos.
+It handles multiple clients using my SocketServer class in panglos.
 
 It uses my [CLI library](https://github.com/DaveBerkeley/cli) enabling a CLI on both
 USB/UART and telnet interfaces, again allowing multiple clients.
