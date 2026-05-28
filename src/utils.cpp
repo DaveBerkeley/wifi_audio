@@ -14,7 +14,7 @@
 #include "utils.h"
 #include "audio_codec.h"
 
-void audio_copy(AudioSource *src, RTP_Engine *rtp)
+void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *dead)
 {
     ASSERT(src);
     ASSERT(rtp);
@@ -35,16 +35,17 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp)
     PO_DEBUG("max_read=%d passes=%d", (int) max_read, (int) passes);
     PO_DEBUG("block_size=%d samples=%d", (int) rtp->rx_bytes(), (int) samples);
 
-    while (true)
+    while (!*dead)
     {
         // blocking read on source
         // use multiple passes until the whole buffer has been read
         size_t total = 0;
+        int idx = 0;
         while (total < ibuff_size)
         {
             size_t todo = ibuff_size - total;
             size_t block = (todo > max_read) ? max_read : todo;
-            src->read(& idata[total], block);
+            src->read(& idata[total], block, idx++);
             total += block;
             //PO_DEBUG("read bytes=%d total=%d", (int) block, (int) total);
         }
@@ -83,7 +84,7 @@ void run_audio_copy(void *arg)
 {
     ASSERT(arg);
     AudioCopy *ac = (AudioCopy *) arg;
-    audio_copy(ac->src, ac->dst);
+    audio_copy(ac->src, ac->dst, ac->dead);
 }
 
 //  FIN

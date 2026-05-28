@@ -48,18 +48,20 @@ void _server(void *arg)
     ASSERT(info);
     ASSERT(info->codec);
     PO_DEBUG("codec=%s", info->codec->name());
+    ASSERT(info->audio_source);
 
     const int num_buffers = 4;
-    PO_DEBUG("RTP_Engine(%d,%d,nbuffs=%d)", info->rtp_ports[1], info->rtp_ports[1], num_buffers);
-    RTP_Engine *rtp = new RTP_Engine(info->codec, info->rtp_ports[1], info->rtp_ports[1], num_buffers, info->allocator);
+    RTP_Engine *rtp = new RTP_Engine(info->codec, info->rtp_ports[0], info->rtp_ports[1], num_buffers, info->allocator);
     Objects::objects->add("rtp", rtp);
-
-    AudioSource *src = (I2S*) Objects::objects->get("i2s");
-    ASSERT(src);
 
     // The Opus encoder needs more stack
     Thread *thread = Thread::create("rtp", 8000);
-    static struct AudioCopy ac = { .src = src, .dst = rtp };
+    bool dead = false;
+    struct AudioCopy ac = {
+        .src = info->audio_source, 
+        .dst = rtp,
+        .dead = & dead,
+    };
     thread->start(run_audio_copy, & ac, CPU_CORE);
 
     // blocking call to run server
@@ -69,7 +71,17 @@ void _server(void *arg)
     PO_DEBUG("RTSP(%s:%s)", info->ip, port);
     rtsp_server(info->ip, port, rtp, info->codec, & sid);
 
-    ASSERT(0); // you can't leave
+    PO_INFO("RTSP Server shut down");
+
+    // kill the RTP thread too
+    PO_INFO("Kill RTP Thread");
+    dead = true;
+    thread->join();
+    delete thread;
+    delete rtp;
+    PO_INFO("RTSP/RTP shut down");
+
+    delete info->codec;
 }
 
 void run_server_thread(struct ServerDesc *info)

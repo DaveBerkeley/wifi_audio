@@ -345,6 +345,11 @@ int RTSP_Handler::command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, in
         {
             return teardown(hdrs);
         }
+        case C_KILL : 
+        {
+            terminate();
+            break;
+        }
         default : ASSERT(0);
     }
 
@@ -431,7 +436,13 @@ class RtspClient : public Client
             ASSERT(end);
             dump((uint8_t*) buff, idx);
             PO_DEBUG("process size=%ld", end);
-            session->process(buff, end);
+            const RtspCommand cmd = session->process(buff, end);
+            if (cmd == C_KILL)
+            {
+                PO_INFO("KILL Server");
+                ss->kill(); // kill the RTSP socket server
+                break;
+            }
 
             // Need to copy any trailing buffer data to the start of the buffer
             idx = 0;

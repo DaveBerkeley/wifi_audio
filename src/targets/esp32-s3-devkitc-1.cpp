@@ -46,15 +46,6 @@ static Device _board_devs[] = {
 void board_init()
 {
     board_init(SCK, WS, SD);
-
-#if defined(RGB)
-    int num = 2;
-    RmtLedStrip *leds = RmtLedStrip::create(num, 24, RmtLedStrip::Type::WS2812B); // , RmtLedStrip::SK68XX);
-    bool ok = leds->init(0, RGB);
-    ASSERT(ok);
-    leds->set(0, 0x40, 0x40, 0x40);
-    leds->set(1, 0x40, 0, 0);
-#endif
 }
 
 Device *board_devs = _board_devs;

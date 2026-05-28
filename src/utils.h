@@ -5,11 +5,11 @@
 
 class RTP_Engine;
 
-class Test_1kHz_Source : public AudioSource
+class xTest_1kHz_Source : public AudioSource
 {
-    virtual size_t read(void *dest, size_t bytes) override;
+    virtual size_t read(void *dest, size_t bytes, int idx) override;
 public:
-    Test_1kHz_Source(RTP_Engine *rtp);
+    xTest_1kHz_Source(RTP_Engine *rtp);
 };
 
 void audio_copy(AudioSource *src, RTP_Engine *dst, bool *dead);
@@ -22,6 +22,7 @@ struct AudioCopy
 {
     AudioSource *src;
     RTP_Engine *dst;
+    bool *dead;
 };
 
 void run_audio_copy(void *arg);

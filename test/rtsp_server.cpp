@@ -57,17 +57,30 @@ public:
         delete[] samples;
     }
 
-    virtual size_t read(void *dest, size_t bytes) override
+    virtual size_t read(void *dest, size_t bytes, int idx) override
     {
         ASSERT(bytes <= max_read_bytes());
         memcpy(dest, samples, bytes);
 
-        Time::tick_t now = Time::get();
-        while (!Time::elapsed(time, 1))
+        UNUSED(idx);
+        Time::msleep(1);
+        
+        if (0) // (idx == 0)
         {
-            Time::msleep(0);
+            //PO_DEBUG("");
+            // wait only for the first block in a sequence of reads
+            Time::tick_t now = Time::get();
+            while (!Time::elapsed(time, period))
+            {
+                ASSERT(period/2);
+                Time::msleep(period/2);
+            }
+            if (time == 0)
+            {
+                time = now;
+            }
+            time += period;
         }
-        time = now;
 
         return bytes;
     }
@@ -113,18 +126,18 @@ TEST(RtspServer, Test)
     AudioCodec *codec = AudioCodec::create(& codec_config);
 
     TestSource source(20);
-    Objects::objects->add("i2s", & source);
 
     struct ServerDesc info = {
         .ip = "0.0.0.0", 
         .rtsp_port = 8554, 
-        .rtp_ports = { 600, 6001 },
+        .rtp_ports = { 6000, 6001 },
         .codec = codec,
+        .audio_source = & source,
     };
 
     _server(& info);
 
-    delete codec;
+    //delete codec; // codec ownership passed to server
     delete Objects::objects;
     Objects::objects = 0;
 }

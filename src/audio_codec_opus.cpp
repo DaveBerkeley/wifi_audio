@@ -9,6 +9,26 @@
 
 #include "audio_codec.h"
 
+    /*
+     *
+     */
+
+static void *scratch = 0;
+
+extern "C" {
+
+    void *opus_alloc_scratch(size_t size)
+    {
+        ASSERT(!scratch);
+        scratch = malloc(size);
+        return scratch;
+    }
+};
+
+    /*
+     *
+     */
+
 class OpusCodec : public AudioCodec
 {
     OpusEncoder *encoder;
@@ -113,6 +133,7 @@ public:
         packet_rate(config->packet_rate),
         samples_per_block(0)
     {
+        PO_DEBUG("");
         int err;
         encoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, & err);
         if (err != OPUS_OK)
@@ -142,8 +163,11 @@ public:
 
     ~OpusCodec()
     {
+        PO_DEBUG("");
         opus_encoder_destroy(encoder);
         free(sdp_fmt);
+        free(scratch);
+        scratch = 0;
     }
 };
 

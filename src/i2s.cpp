@@ -76,8 +76,9 @@ public:
         return true;
     }
 
-    virtual size_t read(void *dest, size_t bytes) override
+    virtual size_t read(void *dest, size_t bytes, int idx) override
     {
+        UNUSED(idx);
         ASSERT(bytes <= max_read_bytes());
         // Blocking Read
         size_t bytes_read;

@@ -65,6 +65,7 @@ base_cflags = [
 
     #'-DUSE_ALLOCA', # requires a huge stack
     '-DNONTHREADSAFE_PSEUDOSTACK',
+    '-DOVERRIDE_OPUS_ALLOC_SCRATCH',
 ] + cross_cflags
 
 # Fixed-point configuration (critical for ESP32)
@@ -126,6 +127,9 @@ config_header = '''
 #define HAVE_STDINT_H 1
 #define HAVE_STDLIB_H 1
 #define HAVE_STRING_H 1
+
+extern void *opus_alloc_scratch (size_t size);
+
 '''
 
 with open('config.h', 'w') as f:

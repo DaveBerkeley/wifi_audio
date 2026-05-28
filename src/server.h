@@ -3,6 +3,7 @@
 
 class AudioCodec;
 class Allocator;
+class AudioSource;
 
 struct ServerDesc
 {
@@ -11,6 +12,7 @@ struct ServerDesc
     int rtp_ports[2];
     AudioCodec *codec;
     Allocator *allocator;
+    AudioSource *audio_source;
 };
 
 void _server(void *);

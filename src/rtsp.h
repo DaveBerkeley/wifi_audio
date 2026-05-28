@@ -17,6 +17,8 @@ enum RTSP_ErrorCodes
     E_Not_Implemented = 501,
     E_Service_Unavailable = 503,
     E_Version_Not_Supported = 505,
+
+    E_KILL = -1,
 };
 
 extern LUT response_lut[];
@@ -73,6 +75,8 @@ typedef enum
     C_PLAY,           // required
     //C_PLAY_NOTIFY,    // required S->C
     C_TEARDOWN,       // required
+
+    C_KILL,           // test command added to terminate the server
 }   RtspCommand;
 
 extern const LUT cmd_lut[];

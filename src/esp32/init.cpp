@@ -10,6 +10,7 @@
 #include "panglos/device.h"
 #include "panglos/object.h"
 #include "panglos/storage.h"
+#include "panglos/network.h"
 
 #include "panglos/app/devices.h"
 #include "panglos/app/event.h"
@@ -68,6 +69,7 @@ static bool rtp_init(void *arg, Event *, Event::Queue *)
     ASSERT(codec);
     info.codec = codec;
     info.allocator = new HeapAllocator;
+    info.audio_source = i2s;
     run_server_thread(& info);
 
     CLI *cli = (CLI*) Objects::objects->get("cli");
@@ -77,9 +79,43 @@ static bool rtp_init(void *arg, Event *, Event::Queue *)
     return false; // INIT handlers must return false so multiple handlers can be run
 }
 
+    /*
+     *
+     */
+
+static bool network_running()
+{
+    Network *net = (Network *) Objects::objects->get("net");
+    if (!net)
+    {
+        PO_ERROR("no network");
+        return false;
+    }
+
+    Interface *iface = net->get_interface();    
+    if (!iface)
+    {
+        PO_ERROR("no interface running");
+        return false;
+    }
+
+    return iface->is_connected(0);
+}
+
+
+    /*
+     *
+     */
+
 void board_init(int sck, int ws, int sd)
 {
     PO_DEBUG("");
+
+    if (!network_running())
+    {
+        PO_ERROR("No Network. Unable to run RTSP/RTP servers.");
+        return;
+    }
 
     AudioCodec *codec = 0;
 
@@ -110,12 +146,8 @@ void board_init(int sck, int ws, int sd)
     ASSERT(i2s);
     Objects::objects->add("i2s", i2s);
 
-    if (Objects::objects->get("net"))
-    {
-        EventHandler::add_handler(Event::INIT, net_cli_init, 0);
-    }
-
     EventHandler::add_handler(Event::INIT, rtp_init, codec);    
+    EventHandler::add_handler(Event::INIT, net_cli_init, 0);
 }
 
 //  FIN

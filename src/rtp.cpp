@@ -76,6 +76,7 @@ RTP_Engine::RTP_Engine(AudioCodec *_codec, int rtp, int rtcp, int num_buffers, A
     timestamp(0),
     blocks(Block::get_next)
 {
+    PO_DEBUG("RTP_Engine(%d,%d,nbuffs=%d)", rtp_port, rtcp_port, num_buffers);
     ASSERT(codec);
     allocator = allocator ? allocator : Allocator::system();
     mutex = panglos::Mutex::create();

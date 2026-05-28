@@ -43,6 +43,11 @@ const LUT cmd_lut[] = {
     { 0, 0 },
 };
 
+const LUT cmd_plus_lut[] = {
+    { "KILL",    C_KILL, },
+    { 0, 0 },
+};
+
 static bool unsupported(const char *cmd)
 {
     // return true if the command is in the list of valid but unsupported commands
@@ -498,7 +503,14 @@ public:
         char *save = 0;
         char *cmd = strtok_r(line, " ", & save);
         if (!cmd) handler->error(E_Bad_Request);
-        const RtspCommand rtsp_cmd = (RtspCommand) rlut(cmd_lut, cmd);
+        PO_DEBUG("%s", cmd);
+        RtspCommand rtsp_cmd = (RtspCommand) rlut(cmd_lut, cmd);
+
+        if (rtsp_cmd == C_UNKNOWN)
+        {
+            rtsp_cmd = (RtspCommand) rlut(cmd_plus_lut, cmd);
+        }
+
         if (rtsp_cmd == C_UNKNOWN) {
             PO_INFO("Unknown command '%s'", cmd);
             if (unsupported(cmd))
@@ -524,6 +536,7 @@ public:
 
         switch(rtsp_cmd)
         {
+            case C_KILL : return parse(& lp, uri, rtsp_cmd, E_OK);
             // valid commands
             case C_PAUSE :
             case C_TEARDOWN :
@@ -601,6 +614,12 @@ class Session : public RTSP_Session
     {
         Parser parser(handler);
         RtspCommand cmd = parser.parse(allowable(), data, s);
+
+        if (cmd == C_KILL)
+        {
+            set_state(DEAD);
+            return C_KILL;
+        }
 
         if (cmd == C_TEARDOWN)
         {
