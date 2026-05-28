@@ -20,7 +20,7 @@ class _I2S : public I2S
     bool error(const char *text, int err)
     {
         if (err == ESP_OK) return false;
-        PO_ERROR("%s '%s' %d", lut(err_lut, err), err);
+        PO_ERROR("%s '%s' %d", text, lut(err_lut, err), err);
         return true;
     }
 
@@ -29,7 +29,7 @@ public:
 
     bool init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd, uint32_t freq, bool byte_swap)
     {
-        PO_DEBUG("sck=%d ws=%d sd=%d freq=%d", sck, ws, sd, freq);
+        PO_DEBUG("sck=%d ws=%d sd=%d freq=%d", sck, ws, sd, (int) freq);
         // General channel configuration (handles DMA and role)
         i2s_chan_config_t chan_cfg = {
             .id = I2S_NUM_AUTO,

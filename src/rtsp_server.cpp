@@ -116,7 +116,7 @@ int RTSP_Handler::describe(RtspHeader *hdrs)
     fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
     fmt->printf("CSeq: %d\r\n", hdrs->cseq);
     fmt->printf("Content-Type: application/sdp\r\n");
-    fmt->printf("Content-Length: %ld\r\n", strlen(buff));
+    fmt->printf("Content-Length: %d\r\n", (int) strlen(buff));
     fmt->printf("\r\n");
     for (char *s = buff; *s; s++)
         fmt->tx(*s);
@@ -435,7 +435,7 @@ class RtspClient : public Client
 
             ASSERT(end);
             dump((uint8_t*) buff, idx);
-            PO_DEBUG("process size=%ld", end);
+            PO_DEBUG("process size=%d", (int) end);
             const RtspCommand cmd = session->process(buff, end);
             if (cmd == C_KILL)
             {

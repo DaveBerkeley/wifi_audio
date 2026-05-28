@@ -174,7 +174,7 @@ public:
 AudioCodec *AudioCodec::create(struct OpusConfig *config)
 {
     ASSERT(config);
-    PO_DEBUG("Opus codec. bit_rate=%d complexity=%d", config->bit_rate, config->complexity);
+    PO_DEBUG("Opus codec. bit_rate=%d complexity=%d", (int) config->bit_rate, (int) config->complexity);
     ASSERT((config->bit_rate >= 6000) && (config->bit_rate <= 510000));
     ASSERT(config->complexity < 11);
     return new OpusCodec(config);

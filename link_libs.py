@@ -102,6 +102,7 @@ files = [
     'panglos/drivers/pwm.h',
     'panglos/drivers/7-segment.h',
     'panglos/drivers/led_strip.h',
+    'panglos/drivers/i2c_bitbang.h',
 
     'panglos/hal.h',
     'panglos/esp32/hal.h',
