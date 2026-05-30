@@ -24,6 +24,7 @@ for msg in messages:
     fn = msg['fn']
     cmd = msg.get('cmd')
     seq = msg.get('seq')
+    code = msg.get('code')
     t = msg['t']
     client = msg.get('thread')
     state = msg.get('state')
@@ -37,7 +38,7 @@ for msg in messages:
     if fn == 'command':
         print(f'\t{client}=>server [ label="t={t} cmd={cmd}", ID={seq} ];')
     if fn == 'common':
-        print(f'\tserver=>{client} [ label="t={t} reply={cmd}", ID={seq} ];')
+        print(f'\tserver=>{client} [ label="t={t} code={code} reply={cmd}", ID={seq} ];')
     if fn == 'set_state':
         if client == 'main': client = 'server'
         print(f'\t{client} box {client} [ label="set_state({state})" ];')

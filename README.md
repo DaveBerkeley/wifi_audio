@@ -22,7 +22,7 @@ USB/UART and telnet interfaces, again allowing multiple clients.
 
 ----
 
-The logging is my standard panglos logger.
+The logging (perhaps tracing is a better word?) uses my standard panglos logger.
 The logging output can be used in conjunction with my 
 [lex.py](https://github.com/DaveBerkeley/lex)
 utility to create message sequence diagrams from the logging output.
@@ -49,12 +49,14 @@ This is read by the Python script msd.py which reads the JSON data and outputs
 [mscgen](https://www.mcternan.me.uk/mscgen/)
 data.
 
-It then runs __mscgen__ on the generated sequence to create a png output file that you can view in your browser.
+It then runs __mscgen__ on the generated datafile to create a png output file that you can view in your browser.
 
     firefox ~/tmp/a.png
 
 You can see clearly that the __mplayer__ client makes two separate client connections.
 The first to gather the OPTIONS / DESCRIBE data, the second to start the stream.
+You can also see that the set_state(INIT) gets called in the server thread, not the client.
+Is this correct?
 
 ![message sequence diagram](docs/20260530_msd.png)
 
