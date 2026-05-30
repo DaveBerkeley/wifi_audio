@@ -24,7 +24,7 @@ USB/UART and telnet interfaces, again allowing multiple clients.
 
 The logging is my standard panglos logger.
 The logging output can be used in conjunction with my 
-[lex.py utility](https://github.com/DaveBerkeley/lex)
+[lex.py](https://github.com/DaveBerkeley/lex)
 utility to create message sequence diagrams from the logging output.
 
 To generate an message sequence diagram showing the communication between client and server,
