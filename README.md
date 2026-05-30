@@ -27,12 +27,12 @@ The logging output can be used in conjunction with my
 [lex.py](https://github.com/DaveBerkeley/lex)
 utility to create message sequence diagrams from the logging output.
 
-To generate an message sequence diagram showing the communication between client and server,
-first run the server on your development machine, catting the output to a text file.
+To generate a message sequence diagram showing the communication between client and server,
+first run the server on your development machine, cating the output to a text file.
 
     scons && ./tdd --gtest_filter="RtspServer.Test" > /tmp/a.txt
 
-In another shell run mplayer.
+In another shell run __mplayer__.
 After it starts playing press 'q' to quit.
 Then send the special 'KILL' command to shut the server down (a debug feature)
 
@@ -49,9 +49,11 @@ This is read by the Python script msd.py which reads the JSON data and outputs
 [mscgen](https://www.mcternan.me.uk/mscgen/)
 data.
 
-This creates the file ~/tmp/a.png that you can view in your browser.
+It then runs __mscgen__ on the generated sequence to create a png output file that you can view in your browser.
 
-You can see clearly that the mplayer client makes two separate client connections.
+    firefox ~/tmp/a.png
+
+You can see clearly that the __mplayer__ client makes two separate client connections.
 The first to gather the OPTIONS / DESCRIBE data, the second to start the stream.
 
 ![message sequence diagram](docs/20260530_msd.png)
