@@ -99,6 +99,21 @@ void RTSP_Handler::flush()
      *  Command handlers : send response
      */
 
+int RTSP_Handler::common(const char *label, RtspHeader *hdrs, bool sid)
+{
+    int code = E_OK;
+    ASSERT(fmt);
+    PO_DEBUG("cmd=%s code=%d '%s' seq=%d", label, code, lut(response_lut, code), hdrs->cseq);
+    fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
+    fmt->printf("CSeq: %d\r\n", hdrs->cseq);
+    if (sid) fmt->printf("Session: %d\r\n", session_id);
+    return code;
+}
+
+    /*
+     *
+     */
+
 int RTSP_Handler::describe(RtspHeader *hdrs)
 {
     // SDP payload
@@ -110,11 +125,8 @@ int RTSP_Handler::describe(RtspHeader *hdrs)
     char *buff = (char*) malloc(sz);
     snprintf(buff, sz, sdp_fmt, session_id, session_version, ip_addr);
 
-    int code = E_OK;
     ASSERT(fmt);
-    PO_DEBUG("%d %s", code, lut(response_lut, code));
-    fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
-    fmt->printf("CSeq: %d\r\n", hdrs->cseq);
+    common("DESCRIBE", hdrs, false);
     fmt->printf("Content-Type: application/sdp\r\n");
     fmt->printf("Content-Length: %d\r\n", (int) strlen(buff));
     fmt->printf("\r\n");
@@ -122,17 +134,18 @@ int RTSP_Handler::describe(RtspHeader *hdrs)
         fmt->tx(*s);
     flush();
     free(buff);
-    return code;
+    return E_OK;
 }
+
+    /*
+     *
+     */
 
 int RTSP_Handler::options(RtspHeader *hdrs)
 {
-    int code = E_OK;
     ASSERT(fmt);
-    PO_DEBUG("%d %s", code, lut(response_lut, code));
-    fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
-    fmt->printf("CSeq: %d\r\n", hdrs->cseq);
-    // Print all the supported commands, with ',' separators
+
+    common("OPTIONS", hdrs, false);
     fmt->printf("Public: ");
     const char *sep = "";
     for (const LUT *_lut = cmd_lut; _lut->text; _lut++)
@@ -142,7 +155,7 @@ int RTSP_Handler::options(RtspHeader *hdrs)
     }
     fmt->printf("\r\n\r\n");
     flush();
-    return code;
+    return E_OK;
 }
 
 char *RTSP_Handler::get_ip(panglos::Socket *)
@@ -177,21 +190,6 @@ char *RTSP_Handler::get_ip(panglos::Socket *)
      *
      */
 
-int RTSP_Handler::common(RtspHeader *hdrs)
-{
-    int code = E_OK;
-    ASSERT(fmt);
-    PO_DEBUG("%d %s", code, lut(response_lut, code));
-    fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
-    fmt->printf("CSeq: %d\r\n", hdrs->cseq);
-    fmt->printf("Session: %d\r\n", session_id);
-    return code;
-}
-
-    /*
-     *
-     */
-
 int RTSP_Handler::setup(RtspHeader *hdrs)
 {
     // search for a usable transport
@@ -216,7 +214,7 @@ int RTSP_Handler::setup(RtspHeader *hdrs)
         return send_error(hdrs, E_Unsupported_Transport);
     }
 
-    int code = common(hdrs);
+    int code = common("SETUP", hdrs, true);
     int rtp_port = 6000, rtcp_port= 6001;
     ASSERT(rtp);
     rtp->get_server_ports(& rtp_port, & rtcp_port);
@@ -256,7 +254,7 @@ int RTSP_Handler::play(RtspHeader *hdrs)
         ASSERT(0);
     }
 
-    int code = common(hdrs);
+    int code = common("PLAY", hdrs, true);
     fmt->printf("RTP-Info: url=rtsp://%s/media/trackID=0;seq=1;rtptime=0\r\n", ip_addr);
     fmt->printf("\r\n");
     flush();
@@ -269,7 +267,7 @@ int RTSP_Handler::play(RtspHeader *hdrs)
 
 int RTSP_Handler::teardown(RtspHeader *hdrs)
 {
-    int code = common(hdrs);
+    int code = common("TEARDOWN", hdrs, true);
     fmt->printf("\r\n");
     flush();
 
@@ -281,7 +279,7 @@ int RTSP_Handler::teardown(RtspHeader *hdrs)
 
 int RTSP_Handler::pause(RtspHeader *hdrs)
 {
-    int code = common(hdrs);
+    int code = common("PAUSE", hdrs, true);
     fmt->printf("\r\n");
     flush();
 
@@ -310,7 +308,7 @@ int RTSP_Handler::send_error(RtspHeader *hdrs, int error_code)
 
 int RTSP_Handler::command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, int error_code)
 {
-    PO_DEBUG("%s %s %d", lut(cmd_lut, cmd), uri, error_code);
+    PO_DEBUG("cmd=%s %s code=%d seq=%d", lut(cmd_lut, cmd), uri, error_code, hdrs->cseq);
 
     if (error_code != E_OK)
     {

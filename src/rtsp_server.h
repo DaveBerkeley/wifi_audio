@@ -57,7 +57,7 @@ class RTSP_Handler : public RTSP_Session::Handler
 
     // command responses
     int describe(RtspHeader *hdrs);
-    int common(RtspHeader *hdrs);
+    int common(const char *label, RtspHeader *hdrs, bool sid);
     int options(RtspHeader *hdrs);
     int setup(RtspHeader *hdrs);
     int play(RtspHeader *hdrs);
