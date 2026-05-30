@@ -215,7 +215,7 @@ int RTP_Engine::send(struct Block *block, size_t bytes, size_t samples)
     // increment the seq id
     block->packet->set_seq(packet_seq++);
     block->packet->set_timestamp(timestamp);
-    timestamp += (int32_t) samples;
+    timestamp += (uint32_t) samples;
 
     // send the packet to all the clients in PLAY state
     struct Buffer params = {

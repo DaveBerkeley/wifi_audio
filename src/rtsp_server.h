@@ -44,10 +44,9 @@ class RTSP_Handler : public RTSP_Session::Handler
 {
     RTP_Engine *rtp;
     int last_error;
-    int session_id;
+    uint32_t session_id;
     int session_version; // increment if values have changed ..
     const char *ip_addr;
-    const char *port;
     panglos::Socket *socket;
     char *buff;
     panglos::CharOut *out;
@@ -70,7 +69,7 @@ class RTSP_Handler : public RTSP_Session::Handler
     char *get_ip(panglos::Socket *);
 
 public:
-    RTSP_Handler(RTP_Engine *rtp, AudioCodec *code, panglos::Socket *s, const char *ip, const char *port, int sid);
+    RTSP_Handler(RTP_Engine *rtp, AudioCodec *code, panglos::Socket *s, const char *ip, uint32_t sid);
     ~RTSP_Handler();
 
     virtual RtspCommand error(int code) override;

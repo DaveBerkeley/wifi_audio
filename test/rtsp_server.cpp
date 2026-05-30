@@ -20,23 +20,23 @@ using namespace panglos;
 
 class TestSource : public AudioSource
 {
-    int period; // ms
+    Time::tick_t period; // ms
     uint16_t *samples;
-    const int waveform_period = 48; // samples
+    const size_t waveform_period = 48; // samples
     Time::tick_t time;
 
     void init(int gain)
     {
         PO_DEBUG("");
 
-        samples = new uint16_t[waveform_period*2];
+        samples = new uint16_t[size_t(waveform_period * 2)];
         for (uint16_t i = 0; i < waveform_period; i++)
         {
             // generate 1kHz sine wave. 48kHz sample rate, 48 samples per cycle
             const int iphase = i % 48;
             double phase = (iphase * M_PI * 2) / 48;
             const double sine = sin(phase);
-            int16_t sample = (int16_t)(gain * sine);
+            uint16_t sample = (uint16_t)(gain * sine);
             sample = ntohs(sample);
             samples[i*2] = sample;
             samples[(i*2)+1] = sample;
@@ -44,7 +44,7 @@ class TestSource : public AudioSource
     }
 
 public:
-    TestSource(int period_ms)
+    TestSource(Time::tick_t period_ms)
     :   period(period_ms),
         samples(0),
         time(0)

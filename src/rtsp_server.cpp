@@ -26,7 +26,7 @@ SocketOut::SocketOut(panglos::Socket *s)
 int SocketOut::tx(const char* data, int n)
 {
     ASSERT(socket);
-    return socket->send((const uint8_t*) data, n);
+    return socket->send((const uint8_t*) data, size_t(n));
 }
 
 void SocketOut::set_socket(Socket *s)
@@ -39,13 +39,12 @@ void SocketOut::set_socket(Socket *s)
      */
 
 RTSP_Handler::RTSP_Handler(RTP_Engine *_rtp, AudioCodec *_codec,
-        panglos::Socket *s, const char *ip, const char *_port, int sid)
+        panglos::Socket *s, const char *ip, uint32_t sid)
 :   rtp(_rtp),
     last_error(E_OK),
     session_id(sid),
     session_version(1),
     ip_addr(ip),
-    port(_port),
     socket(s),
     buff(0),
     out(0),
@@ -91,7 +90,7 @@ int RTSP_Handler::get_last_error()
 void RTSP_Handler::flush()
 {
     PO_DEBUG("sz=%d", out->get_idx());
-    socket->send((uint8_t*) buff, out->get_idx());
+    socket->send((uint8_t*) buff, size_t(out->get_idx()));
     out->reset();
 }
 
@@ -348,6 +347,7 @@ int RTSP_Handler::command(RtspCommand cmd, const char *uri, RtspHeader *hdrs, in
             terminate();
             break;
         }
+        case C_UNKNOWN :
         default : ASSERT(0);
     }
 
@@ -386,7 +386,7 @@ class RtspClient : public Client
     RTSP_Handler *handler;
     RTSP_Session *session;
     char *buff;
-    int sz;
+    size_t sz;
     int idx;
 
     char *search(const char *match)
@@ -403,7 +403,7 @@ class RtspClient : public Client
         // call in a loop : 
         while (session->get_state() != RTSP_Session::DEAD)
         {
-            int size = sock->recv((uint8_t*) & buff[idx], sz - idx);
+            int size = sock->recv((uint8_t*) & buff[idx], sz - size_t(idx));
             PO_DEBUG("size=%d idx=%d sum=%d", size, idx, size + idx);
             if (size <= 0) break;
 
@@ -428,7 +428,7 @@ class RtspClient : public Client
             else
             {
                 // skip the trailing "\r\n\r\n"
-                end = (block + 4) - buff;
+                end = size_t((block + 4) - buff);
             }
 
             ASSERT(end);
@@ -451,7 +451,7 @@ class RtspClient : public Client
     }
 
 public:
-    RtspClient(SocketServer *ss, RTP_Engine *r, AudioCodec *codec, const char *ip, const char *port, uint32_t sid)
+    RtspClient(SocketServer *ss, RTP_Engine *r, AudioCodec *codec, const char *ip, uint32_t sid)
     :   Client(ss),
         rtp(r),
         handler(0),
@@ -465,7 +465,7 @@ public:
 
         ASSERT(codec);
         PO_DEBUG("codec=%s", codec->name());
-        handler = new RTSP_Handler(rtp, codec, sock, ip, port, sid);
+        handler = new RTSP_Handler(rtp, codec, sock, ip, sid);
         session = RTSP_Session::create(handler);
     }
 
@@ -492,7 +492,7 @@ class Factory : public Client::Factory
     virtual Client *create_client(SocketServer *ss) override
     {
         uint32_t sid = sid_gen ? sid_gen->generate() : 12345;
-        return new RtspClient(ss, rtp, codec, ip, port, sid);
+        return new RtspClient(ss, rtp, codec, ip, sid);
     }
 public:
     Factory(RTP_Engine *r, AudioCodec *_codec, const char *_ip, const char *_port, SidGenerator *gen=0)

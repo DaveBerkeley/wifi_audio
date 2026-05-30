@@ -123,7 +123,7 @@ class OpusCodec : public AudioCodec
             return 0;
         }
 
-        return err;
+        return size_t(err);
     }
 
 public:

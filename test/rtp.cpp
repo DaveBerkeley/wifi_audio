@@ -5,7 +5,7 @@
 
 TEST(RTP, HeaderFields)
 {
-    struct RTP_Header header = { 0 };
+    struct RTP_Header header = { { 0 } };
 
     header.set_version(0);
     EXPECT_EQ(header.head[0], 0x00);

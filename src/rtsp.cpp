@@ -370,7 +370,7 @@ public:
             if (idx)
             {
                 char *prev = lines[idx-1];
-                for (size_t si = lines[idx] - prev - 1; si > 0; si--)
+                for (size_t si = size_t(lines[idx] - prev - 1); si > 0; si--)
                 {
                     if ((prev[si] == ' ') || (prev[si] == ','))
                         prev[si] = '\0';
@@ -438,8 +438,10 @@ public:
             else if (!strncasecmp(header, "Session:", 8))
             {
                 char *s = strtok_r(0, " ", & save);
-                if (!get_number(& hdr->session_id, s))
+                int n = 0;
+                if (!get_number(& n, s))
                     return false;
+                hdr->session_id = uint32_t(n);
             }
             else if (!strncasecmp(header, "Accept:", 7))
             {
@@ -544,6 +546,7 @@ public:
             case C_DESCRIBE :
             case C_SETUP :
             case C_OPTIONS : return parse(& lp, uri, rtsp_cmd, code);
+            case C_UNKNOWN : break;
             default : ASSERT(0); break;
         }
 
@@ -605,6 +608,7 @@ class Session : public RTSP_Session
             case INIT : return init;
             case READY : return ready;
             case PLAY : return ready; // same commands as READY
+            case DEAD : 
             default : ASSERT(0);
         }
         return init;

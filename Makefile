@@ -58,7 +58,7 @@ tdd:
 	scons
 
 test: tdd
-	vlagrind ./tdd --gtest_filter="-RtspServer.Test"
+	valgrind ./tdd --gtest_filter="-RtspServer.Test"
 
 clang: export CC=clang
 clang: export CXX=clang++

@@ -39,7 +39,7 @@ public:
 
     virtual int tx(const char* data, int n) override
     {
-        return socket->send((const uint8_t*) data, n);
+        return socket->send((const uint8_t*) data, size_t(n));
     }
 };
 
@@ -105,7 +105,7 @@ TEST(RTSP, Describe)
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -150,7 +150,7 @@ TEST(RTSP, NoSdp)
 {
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
-    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -177,7 +177,7 @@ TEST(RTSP, WrongVersion)
 {
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
-    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -203,7 +203,7 @@ TEST(RTSP, BadCommand)
 {
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
-    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -230,7 +230,7 @@ TEST(RTSP, IgnoreLeading)
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
 
     const char* describe[] = {
@@ -260,7 +260,7 @@ TEST(RTSP, Setup)
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6010, 6011, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -296,7 +296,7 @@ TEST(RTSP, SetupComplex)
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -326,7 +326,7 @@ TEST(RTSP, SetupComma)
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -358,7 +358,7 @@ TEST(RTSP, Options)
 {
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
-    RTSP_Handler handler(0, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
@@ -394,7 +394,7 @@ TEST(RTSP, Play)
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
-    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, port, sid);
+    RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
     RTSP_Session *session = RTSP_Session::create(& handler);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 

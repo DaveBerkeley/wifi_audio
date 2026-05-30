@@ -19,7 +19,7 @@ void _server(void *);
 
 void run_server_thread(struct ServerDesc *);
 
-class CLI;
-void add_rtp_commands(CLI *cli);
+struct CLI;
+void add_rtp_commands(struct CLI *cli);
 
 //  FIN
