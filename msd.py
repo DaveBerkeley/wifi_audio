@@ -11,7 +11,8 @@ for line in sys.stdin:
     messages.append(j)
     thread = j['thread']
     if not thread in clients:
-        clients.append(thread)
+        if thread.startswith("client_"):
+            clients.append(thread)
 
 print("msc {")
 print("\t", ", ".join(clients), ", server;")
@@ -21,21 +22,25 @@ tprev = None
 
 for msg in messages:
     fn = msg['fn']
-    cmd = msg['cmd']
-    seq = msg['seq']
+    cmd = msg.get('cmd')
+    seq = msg.get('seq')
     t = msg['t']
-    client = msg['thread']
+    client = msg.get('thread')
+    state = msg.get('state')
     if t0 == None:
         t0 = t
     t -= t0
 
     if tprev and ((t - tprev) > 1000):
-        print('---;')
+        print('\t---;')
 
     if fn == 'command':
         print(f'\t{client}=>server [ label="t={t} cmd={cmd}", ID={seq} ];')
     if fn == 'common':
         print(f'\tserver=>{client} [ label="t={t} reply={cmd}", ID={seq} ];')
+    if fn == 'set_state':
+        if client == 'main': client = 'server'
+        print(f'\t{client} box {client} [ label="set_state({state})" ];')
 
     tprev = t
 
