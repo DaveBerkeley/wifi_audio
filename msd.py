@@ -15,7 +15,8 @@ for line in sys.stdin:
             clients.append(thread)
 
 print("msc {")
-print("\t", ", ".join(clients), ", server;")
+print("\t", 'hscale = "2";')
+print("\t", ", ".join(clients), ", server, time;")
 
 t0 = None
 tprev = None
@@ -27,21 +28,33 @@ for msg in messages:
     code = msg.get('code')
     t = msg['t']
     client = msg.get('thread')
-    state = msg.get('state')
     if t0 == None:
         t0 = t
     t -= t0
+    if client in [ 'rtsp', 'main' ]:
+        client = 'server'
 
     if tprev and ((t - tprev) > 1000):
         print('\t---;')
 
-    if fn == 'command':
-        print(f'\t{client}=>server [ label="t={t} cmd={cmd}", ID={seq} ];')
-    if fn == 'common':
-        print(f'\tserver=>{client} [ label="t={t} code={code} reply={cmd}", ID={seq} ];')
+    print(f'\ttime note time [ label="{t}" ],')
+
+    args = ''
     if fn == 'set_state':
-        if client == 'main': client = 'server'
-        print(f'\t{client} box {client} [ label="set_state({state})" ];')
+        args = msg.get('state', '')
+    elif fn in [ '~Client', 'del_client' ]:
+        args = msg.get('client', '')
+    elif fn == 'send_error':
+        args = msg['err']
+
+    if fn == 'command':
+        print(f'\t{client}=>server [ label="{cmd}, seq={seq}" ];')
+    elif fn == 'common':
+        print(f'\tserver>>{client} [ label="{cmd} code={code} seq={seq}" ];')
+    elif fn == 'send_error':
+        print(f'\tserver>>{client} [ label="{args} seq={seq}" ];')
+    else:
+        print(f'\t{client} box {client} [ label="{fn}({args})" ];')
 
     tprev = t
 

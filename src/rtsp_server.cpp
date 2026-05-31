@@ -296,7 +296,7 @@ int RTSP_Handler::send_error(RtspHeader *hdrs, int error_code)
 {
     // Error Response
     ASSERT(fmt);
-    PO_DEBUG("%d %s", error_code, lut(response_lut, error_code));
+    PO_DEBUG("code=%d seq=%d msg='%s'", error_code, hdrs ? hdrs->cseq : 0, lut(response_lut, error_code));
     fmt->printf("RTSP/1.0 %d %s\r\n", error_code, lut(response_lut, error_code));
     if (hdrs)
         fmt->printf("CSeq: %d\r\n", hdrs->cseq);
