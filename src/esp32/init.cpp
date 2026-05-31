@@ -142,7 +142,7 @@ void board_init(int sck, int ws, int sd)
     }
 
     ASSERT(codec);
-    I2S *i2s = I2S::create(sck, ws, sd, 48000, !codec->network_order());
+    I2S *i2s = I2S::create(sck, ws, sd, 48000, codec->network_order());
     ASSERT(i2s);
     Objects::objects->add("i2s", i2s);
 
