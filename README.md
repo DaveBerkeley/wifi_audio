@@ -22,13 +22,19 @@ USB/UART and telnet interfaces, again allowing multiple clients.
 
 ----
 
-The logging (perhaps tracing is a better word?) uses my standard panglos logger.
-The logging output can be used in conjunction with my 
+Logging
+====
+
+The logging system (perhaps tracing is a better word?) uses my standard 
+[panglos](https://github.com/DaveBerkeley/panglos) 
+logger.
+
+The following shows how the logging output can be used in conjunction with my 
 [lex.py](https://github.com/DaveBerkeley/lex)
-utility to create message sequence diagrams from the logging output.
+utility to create message sequence diagrams directly from the logging output.
 
 To generate a message sequence diagram showing the communication between client and server,
-first run the server on your development machine, cating the output to a text file.
+first run the server on your development machine, catting the output to a text file.
 
     scons && ./tdd --gtest_filter="RtspServer.Test" > /tmp/a.txt
 
@@ -56,12 +62,26 @@ It then runs __mscgen__ on the generated datafile to create a png output file th
 You can see clearly that the __mplayer__ client makes two separate client connections.
 The first to gather the OPTIONS / DESCRIBE data, the second to start the stream.
 You can also see that the set_state(INIT) gets called in the server thread, not the client.
-Is this correct?
+It shows where each client thread marks itself as ready for deletion 
+and where this deletion occurs in the server thread.
+The third client is the KILL command used to terminate the server.
+The set_state() calls reflect the RTSP server state machine.
 
 ![message sequence diagram](docs/20260530_msd.png)
 
 By using a consistent logging format and the right tools it is easy to automatically create
 visual representations of data flows, system interconnections etc.
+It can also be used to verify where and when resources are allocated and freed.
+
+These logs can be taken from a live target or from a test program.
+You can verify the state machine of the RTSP engine.
+You can test for malformed requests and see the results.
+
+To capture logs from a live target you simply connect to the CLI over the network and enable logs :
+
+    echo -e "log\n" | nc devkit.local 6668 > /tmp/a.txt
+
+You can then run the same __mplayer__, __kill__ sequence with the target.
 
 Links
 ====
