@@ -15,7 +15,7 @@ if env['BOARD_MCU'] == "esp32s3":
         #'-fdata-sections',
         #'-Wl,--gc-sections',
     ]
-elif env['BOARD_MCU'] == "esp32c3":
+elif env['BOARD_MCU'] in [ "esp32c3", "esp32c6" ]:
     target = "riscv32-esp"
     cross_cflags = [ ]
 

@@ -55,7 +55,7 @@ void _server(void *arg)
     Objects::objects->add("rtp", rtp);
 
     // The Opus encoder needs more stack
-    Thread *thread = Thread::create("rtp", 8000);
+    Thread *thread = Thread::create("rtp", 8000, Thread::High);
     bool dead = false;
     struct AudioCopy ac = {
         .src = info->audio_source, 

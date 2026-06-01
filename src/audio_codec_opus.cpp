@@ -19,8 +19,10 @@ extern "C" {
 
     void *opus_alloc_scratch(size_t size)
     {
+        PO_DEBUG("size=%d", (int) size);
         ASSERT(!scratch);
         scratch = malloc(size);
+        ASSERT(scratch);
         return scratch;
     }
 };
