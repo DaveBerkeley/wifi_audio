@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "esp_heap_caps.h"
+#include "driver/i2s_std.h"
+#include "driver/gpio.h"
 
 #include "panglos/debug.h"
 
@@ -18,9 +20,10 @@
 
 using namespace panglos;
 
-#include "i2s.h"
+#include "../i2s.h"
 #include "server.h"
 #include "esp32/init.h"
+#include "esp32/i2s.h"
 #include "audio_codec.h"
 #include "rtp.h"
 
@@ -54,7 +57,7 @@ static struct PcmConfig pcm_config = {
 static struct OpusConfig opus_config = {
     .bit_rate = 96000,
     .complexity = 8,
-    .packet_rate = 40, // ms
+    .packet_rate = 60, // ms
 };
 
 static bool rtp_init(void *arg, Event *, Event::Queue *)
