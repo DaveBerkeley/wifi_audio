@@ -75,12 +75,18 @@ class PcmCodec : public AudioCodec
         return samples_per_packet() * num_chans() * sizeof(int16_t);
     }
 
-    virtual size_t process(const uint8_t *src, size_t samples, uint8_t *dst, size_t obytes) override
+    virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) override
     {
         const size_t size = samples * num_chans() * data_size();
         ASSERT(size <= obytes);
         memcpy(dst, src, size);
         return size;
+    }
+
+    virtual size_t decode(const uint8_t *, size_t , int16_t *, size_t ) override
+    {
+        ASSERT(0); // TODO
+        return 0;
     }
 
 public:

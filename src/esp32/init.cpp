@@ -54,12 +54,6 @@ static struct PcmConfig pcm_config = {
     .freq = 48000,
 };
 
-static struct OpusConfig opus_config = {
-    .bit_rate = 96000,
-    .complexity = 8,
-    .packet_rate = 60, // ms
-};
-
 static bool rtp_init(void *arg, Event *, Event::Queue *)
 {
     PO_DEBUG("");
@@ -105,23 +99,66 @@ static bool network_running()
     return iface->is_connected(0);
 }
 
+    /*
+     *
+     */
+
+struct Param
+{
+    const char *name;
+    int32_t *value;
+};
+
+static void get_params(Storage &db, const struct Param *params)
+{
+    for (const struct Param *p = params; p->name; p++)
+    {
+        if (db.get(p->name, p->value))
+        {
+            PO_DEBUG("%s.%s=%d", db.get_ns(), p->name, *p->value);
+        }
+    }
+}
 
     /*
      *
      */
 
-void board_init(int sck, int ws, int sd)
+static AudioCodec *make_opus()
 {
     PO_DEBUG("");
 
-    if (!network_running())
-    {
-        PO_ERROR("No Network. Unable to run RTSP/RTP servers.");
-        return;
-    }
+    Storage db("opus");
 
-    AudioCodec *codec = 0;
+    int32_t bit_rate = 96000;
+    int32_t complexity = 8;
+    int32_t packet_rate = 60; // ms
 
+    struct Param params[] = {
+        {   "bit_rate", & bit_rate },
+        {   "complexity", & complexity },
+        {   "packet_rate", & packet_rate },
+        { 0, 0 },
+    };
+ 
+    get_params(db, params);
+
+    struct OpusConfig opus_config = {
+        .bit_rate    = (uint32_t) bit_rate,
+        .complexity  = (uint32_t) complexity,
+        .packet_rate = (uint32_t) packet_rate, // ms
+        .encode = true,
+    };
+
+    return AudioCodec::create(& opus_config);
+}
+
+    /*
+     *
+     */
+
+static AudioCodec *make_codec()
+{
     Storage db("app");
 
     char name[64];
@@ -130,23 +167,84 @@ void board_init(int sck, int ws, int sd)
     {
         if (!strcmp("opus", name))
         {
-            codec = AudioCodec::create(& opus_config);
+            return make_opus();
         }
-        else if (!strcmp("pcm", name))
+        else if (strcmp("pcm", name))
         {
-            codec = AudioCodec::create(& pcm_config);
+            PO_ERROR("Unknown codec '%s", name);
+            return 0;
         }
     }
 
-    if (!codec)
-    {
-        PO_INFO("Creating default codec");
-        codec = AudioCodec::create(& pcm_config);
-    }
+    PO_INFO("Creating PCM codec");
+    return AudioCodec::create(& pcm_config);
+}
+
+    /*
+     *
+     */
+
+static I2S *make_i2s(AudioCodec *codec, gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
+{
+    PO_DEBUG("");
 
     ASSERT(codec);
-    I2S *i2s = I2S::create(sck, ws, sd, 48000, codec->network_order());
-    ASSERT(i2s);
+    Storage db("i2s");
+
+    int32_t bits = 16;
+    int32_t slot_bits = 16;
+    int32_t freq = 48000;
+
+    struct Param params[] = {
+        {   "bits", & bits },
+        {   "slot_bits", & slot_bits },
+        {   "freq", & freq },
+        { 0, 0 },
+    };
+ 
+    get_params(db, params);
+
+    ESP32_I2S::Config config = {
+        .sck = sck,
+        .ws = ws,
+        .sd = sd,
+        .freq = (uint32_t) freq,
+        .bits = (uint32_t) bits,
+        .slot_bits = (uint32_t) slot_bits,
+        .byte_swap = codec->network_order(),
+    };
+
+    return ESP32_I2S::create(& config);
+}
+
+    /*
+     *
+     */
+
+void board_init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
+{
+    PO_DEBUG("");
+
+    if (!network_running())
+    {
+        PO_ERROR("No Network Unable to run RTSP/RTP servers.");
+        return;
+    }
+
+    AudioCodec *codec = make_codec();
+    if (!codec)
+    {
+        PO_ERROR("No Codec!");
+        return;
+    }
+
+    I2S *i2s = make_i2s(codec, sck, ws, sd);
+    if (!i2s)
+    {
+        PO_ERROR("No I2S input device!");
+        return;
+    }
+
     Objects::objects->add("i2s", i2s);
 
     EventHandler::add_handler(Event::INIT, rtp_init, codec);    

@@ -7,6 +7,7 @@ files = [
     'src/audio_codec_pcm.cpp',
     'src/audio_codec_opus.cpp',
     'src/server.cpp',
+    'src/wav_file.cpp',
 
     'test/main.cpp',
     'test/storage.cpp',

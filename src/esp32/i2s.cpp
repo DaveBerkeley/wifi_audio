@@ -23,9 +23,9 @@ bool ESP32_I2S::error(const char *text, int err)
 
 ESP32_I2S::ESP32_I2S() { }
 
-bool ESP32_I2S::init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd, uint32_t freq, bool byte_swap)
+bool ESP32_I2S::init(const ESP32_I2S::Config *config)
 {
-    PO_DEBUG("sck=%d ws=%d sd=%d freq=%d", sck, ws, sd, (int) freq);
+    ASSERT(config);
     // General channel configuration (handles DMA and role)
     i2s_chan_config_t chan_cfg = {
         .id = I2S_NUM_AUTO,
@@ -41,14 +41,14 @@ bool ESP32_I2S::init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd, uint32_t freq
 
     // I2S Standard Mode Configuration (handles protocol, clocks, and data format)
     i2s_std_config_t std_cfg = {
-        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(freq),
+        .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(config->freq),
         .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,
-            .bclk = sck,
-            .ws = ws,
+            .bclk = config->sck,
+            .ws = config->ws,
             .dout = I2S_GPIO_UNUSED,
-            .din = sd,
+            .din = config->sd,
             .invert_flags = {
                 .mclk_inv = false,
                 .bclk_inv = false,
@@ -57,8 +57,17 @@ bool ESP32_I2S::init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd, uint32_t freq
         },
     };
 
+    //switch (config->slot_bits)
+    //{
+    //    case 24: std_cfg.clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_384; break;
+    //    default: break;
+    //}
+
     // byte-swap for systems that want little-endian native data
-    std_cfg.slot_cfg.big_endian = byte_swap;
+    std_cfg.slot_cfg.big_endian = config->byte_swap;
+    // set the bits per audo sample and the I2S bits per half frame
+    std_cfg.slot_cfg.data_bit_width = (i2s_data_bit_width_t) config->bits;
+    std_cfg.slot_cfg.slot_bit_width = (i2s_slot_bit_width_t) config->slot_bits;
 
     // Apply the I2S configuration to the channel
     err = i2s_channel_init_std_mode(handle, & std_cfg);
@@ -97,10 +106,15 @@ size_t ESP32_I2S::max_read_bytes()
      *
      */
 
-I2S *I2S::create(int sck, int ws, int sd, uint32_t freq, bool byte_swap)
+ESP32_I2S *ESP32_I2S::create(const struct ESP32_I2S::Config *config)
 {
+    PO_DEBUG("sck=%d ws=%d sd=%d freq=%d bits=%d slot=%d", 
+            config->sck, config->ws, config->sd, 
+            (int) config->freq,
+            config->bits, config->slot_bits);
+
     ESP32_I2S *i2s = new ESP32_I2S();
-    bool ok = i2s->init((gpio_num_t) sck, (gpio_num_t) ws, (gpio_num_t) sd, freq, byte_swap);
+    bool ok = i2s->init(config);
     if (ok) return i2s;
     delete i2s;
     return 0;

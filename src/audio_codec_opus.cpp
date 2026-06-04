@@ -34,9 +34,64 @@ extern "C" {
 class OpusCodec : public AudioCodec
 {
     OpusEncoder *encoder;
+    OpusDecoder *decoder;
     char *sdp_fmt;
-    uint32_t packet_rate; // in ms
     uint32_t samples_per_block;
+    struct OpusConfig config;
+    const int channels = 2;
+
+    bool make_encoder()
+    {
+        PO_DEBUG("bit_rate=%d complexity=%d packet_rate=%d ms",
+            config.bit_rate,
+            config.complexity,
+            config.packet_rate);
+
+        int err = OPUS_OK;
+        encoder = opus_encoder_create(48000, channels, OPUS_APPLICATION_AUDIO, & err);
+        if (err != OPUS_OK)
+        {
+            error(err, "opus_encoder_create()");
+            return false;
+        }
+
+        err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(config.bit_rate));
+        if (err != OPUS_OK)
+        {
+            error(err, "opus_encoder_ctl(OPUS_SET_BITRATE)");
+            return false;
+        }
+        err = opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(config.complexity));
+        if (err != OPUS_OK)
+        {
+            error(err, "opus_encoder_ctl(OPUS_SET_COMPLEXITY)");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool make_decoder()
+    {
+        PO_DEBUG("bit_rate=%d complexity=%d packet_rate=%d ms",
+            config.bit_rate,
+            config.complexity,
+            config.packet_rate);
+
+        int size = opus_decoder_get_size(channels);
+
+        decoder = (OpusDecoder*)malloc(size);
+        ASSERT(decoder);
+
+        int err = opus_decoder_init(decoder, 48000, channels);
+        if (err != OPUS_OK)
+        {
+            error(err, "opus_encoder_create()");
+            return false;
+        }
+        
+        return true;
+    }
 
     void make_sdp_fmt()
     {
@@ -116,57 +171,59 @@ class OpusCodec : public AudioCodec
         PO_ERROR("%s %s", text, opus_strerror(code));
     }
 
-    virtual size_t process(const uint8_t *src, size_t samples, uint8_t *dst, size_t obytes) override
+    virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) override
     {
-        opus_int32 err = opus_encode(encoder, (const opus_int16*) src, (int) samples, dst, (int) obytes);
+        ASSERT(encoder);
+        opus_int32 err = opus_encode(encoder, src, (int) samples, dst, (int) obytes);
         if (err <= 0)
         {
-            error(err, "opus_encoder_create()");
+            error(err, "opus_encoder()");
             return 0;
         }
 
         return size_t(err);
     }
 
-public:
-    OpusCodec(struct OpusConfig *config)
-    :   encoder(0),
-        sdp_fmt(0),
-        packet_rate(config->packet_rate),
-        samples_per_block(0)
+    virtual size_t decode(const uint8_t *src, size_t ibytes, int16_t *dst, size_t obytes) override
     {
-        PO_DEBUG("");
-        int err;
-        encoder = opus_encoder_create(48000, 2, OPUS_APPLICATION_AUDIO, & err);
-        if (err != OPUS_OK)
-        {
-            error(err, "opus_encoder_create()");
-            return;
-        }
+        ASSERT(decoder);
+        size_t samples = opus_decode(decoder, src, (opus_int32) ibytes, dst, (int) obytes, 0);
+        return samples;
+    }
 
-        err = opus_encoder_ctl(encoder, OPUS_SET_BITRATE(config->bit_rate));
-        if (err != OPUS_OK)
+public:
+    OpusCodec(struct OpusConfig *_config)
+    :   encoder(0),
+        decoder(0),
+        sdp_fmt(0),
+        samples_per_block(0),
+        config(*_config)
+    {
+        PO_DEBUG("bit_rate=%d complexity=%d packet_rate=%d ms",
+            config.bit_rate,
+            config.complexity,
+            config.packet_rate);
+
+        if (config.encode)
         {
-            error(err, "opus_encoder_ctl(OPUS_SET_BITRATE)");
-            return;
+            make_encoder();
         }
-        err = opus_encoder_ctl(encoder, OPUS_SET_COMPLEXITY(config->complexity));
-        if (err != OPUS_OK)
+        if (config.decode)
         {
-            error(err, "opus_encoder_ctl(OPUS_SET_COMPLEXITY)");
-            return;
+            make_decoder();
         }
 
         // Calcuate the number of audio sample periods in each packet
         // at 48kHz sample rate, 48 sample per ms
-        ASSERT(packet_rate);
-        samples_per_block = packet_rate * 48;
+        ASSERT(config.packet_rate);
+        samples_per_block = config.packet_rate * 48;
     }
 
     ~OpusCodec()
     {
         PO_DEBUG("");
-        opus_encoder_destroy(encoder);
+        if(encoder) opus_encoder_destroy(encoder);
+        free(decoder);
         free(sdp_fmt);
         free(scratch);
         scratch = 0;
@@ -176,7 +233,6 @@ public:
 AudioCodec *AudioCodec::create(struct OpusConfig *config)
 {
     ASSERT(config);
-    PO_DEBUG("Opus codec. bit_rate=%d complexity=%d", (int) config->bit_rate, (int) config->complexity);
     ASSERT((config->bit_rate >= 6000) && (config->bit_rate <= 510000));
     ASSERT(config->complexity < 11);
     return new OpusCodec(config);

@@ -25,7 +25,7 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *dead)
     size_t ibuff_size = rtp->rx_bytes();
     Allocator *allocator = rtp->get_allocator();
     ASSERT(allocator);
-    uint8_t *idata = (uint8_t *) allocator->malloc(ibuff_size);
+    int16_t *idata = (int16_t *) allocator->malloc((ibuff_size + 1) / 2);
     //memset(idata, 0, ibuff_size);
     ASSERT(idata);
     const size_t samples = codec->samples_per_packet();
@@ -67,7 +67,7 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *dead)
         
         // compress the data
         uint8_t *odata = block->packet->get_audio();
-        size_t sz = codec->process(idata, samples, odata, rtp->rx_bytes());
+        size_t sz = codec->encode(idata, samples, odata, rtp->rx_bytes());
         // send the RTP data
         rtp->send(block, sz, samples);
     }

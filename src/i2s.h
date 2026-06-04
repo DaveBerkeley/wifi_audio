@@ -12,8 +12,6 @@ public:
 
 class I2S : public AudioSource
 {
-public:
-    static I2S *create(int sck, int ws, int sd, uint32_t freq, bool byte_swap);
 };
 
 //  FIN

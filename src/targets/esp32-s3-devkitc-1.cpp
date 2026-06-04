@@ -21,9 +21,9 @@ using namespace panglos;
 
 #if defined(ESP32_S3_DKC1)
 
-#define SCK GPIO_NUM_12
-#define WS GPIO_NUM_13
-#define SD GPIO_NUM_14
+#define SCK GPIO_NUM_13
+#define WS GPIO_NUM_14
+#define SD GPIO_NUM_12
 
 //#define RGB GPIO_NUM_11
 // Dammit, I've used the RGB LED for +5V I2C, so probably blown it up.
