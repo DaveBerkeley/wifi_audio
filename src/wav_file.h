@@ -9,8 +9,6 @@ class WavSource : public AudioSource
     size_t limit;
     FILE* file;
 
-    static FILE* wav_error(const char *text, int err);
-
 public:
     WavSource(size_t _limit=0);
     ~WavSource();
@@ -21,6 +19,22 @@ public:
     // implement AudioSource
     virtual size_t read(void *dest, size_t bytes, int) override;
     virtual size_t max_read_bytes() override;
+};
+
+class WavSink
+{
+    size_t written;
+    FILE* file;
+
+    bool write_header(int offset, uint32_t data);
+public:
+    WavSink();
+    ~WavSink();
+
+    bool open(const char *path);
+    bool close();
+
+    bool write(void *data, size_t bytes);
 };
 
 //  FIN

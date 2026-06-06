@@ -14,6 +14,7 @@
 #include "panglos/app/devices.h"
 
 #include "board.h"
+#include "fs.h"
 
 #include "esp32/init.h"
 
@@ -31,6 +32,11 @@ using namespace panglos;
 
 #define DEBUG_PIN GPIO_NUM_10
 
+#define SDCARD_MISO  GPIO_NUM_41
+#define SDCARD_MOSI  GPIO_NUM_40
+#define SDCARD_CLK   GPIO_NUM_39
+#define SDCARD_CS    GPIO_NUM_42
+
 static const GPIO_DEF debug_def = { DEBUG_PIN, ESP_GPIO::OP };
 
     /*
@@ -46,6 +52,16 @@ static Device _board_devs[] = {
 void board_init()
 {
     board_init(SCK, WS, SD);
+
+#if 0
+    struct SpiPins pins = {
+        .cs = SDCARD_CS,
+        .mosi = SDCARD_MOSI,
+        .miso = SDCARD_MISO,
+        .ck = SDCARD_CLK,
+    };
+    init_fs(& pins);
+#endif
 }
 
 Device *board_devs = _board_devs;
