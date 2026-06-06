@@ -66,12 +66,13 @@ clang: export CXX=clang++
 clang: $(APP)
 	scons
 
-gdb:
-	/home/dave/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32c3-builtin.cfg
+#	JTAG debug
 
-opus:  test/opus.cpp third_party/build/libopus.a Makefile
-	gcc test/opus.cpp -I third_party/opus/include/ -DUSE_ALLOCA third_party/build/libopus.a -lm -o opus
-	#gcc test/opus.cpp -I third_party/opus/include/ -DUSE_ALLOCA -lm -lopus -o opus
-	./opus
+openocd:
+	#~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32c3-builtin.cfg
+	~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32s3-builtin.cfg
+
+gdb:
+	~/.platformio/tools/tool-xtensa-esp-elf-gdb/bin/xtensa-esp32-elf-gdb
 
 #	FIN
