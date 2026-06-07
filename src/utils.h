@@ -3,7 +3,10 @@
      *
      */
 
+class AudioSource;
 class RTP_Engine;
+
+void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *dead);
 
 struct AudioCopy
 {
@@ -13,5 +16,6 @@ struct AudioCopy
 };
 
 void run_audio_copy(void *arg);
+
 
 //  FIN

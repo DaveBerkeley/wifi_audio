@@ -40,12 +40,20 @@ static FILE* error(const char *text, int err)
 WavSource::WavSource(size_t _limit)
 :   size(0),
     limit(_limit),
-    file(0)
+    file(0),
+    on_done(0),
+    on_done_arg(0)
 { }
 
 WavSource::~WavSource()
 {
     fclose(file);
+}
+
+void WavSource::set_on_done(void (*fn)(void *), void *arg)
+{
+    on_done = fn;
+    on_done_arg = arg;
 }
 
 bool WavSource::open(const char *path)
@@ -104,6 +112,10 @@ bool WavSource::done()
 
 size_t WavSource::read(void *dest, size_t bytes, int)
 {
+    if (on_done && done())
+    {
+        on_done(on_done_arg);
+    }
     return fread(dest, 1, bytes, file);
 }
 

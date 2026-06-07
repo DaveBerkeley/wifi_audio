@@ -8,6 +8,8 @@ class WavSource : public AudioSource
     size_t size;
     size_t limit;
     FILE* file;
+    void (*on_done)(void *);
+    void *on_done_arg;
 
 public:
     WavSource(size_t _limit=0);
@@ -15,6 +17,8 @@ public:
 
     bool open(const char *path);
     bool done();
+
+    void set_on_done(void (*fn)(void *), void *arg);
 
     // implement AudioSource
     virtual size_t read(void *dest, size_t bytes, int) override;

@@ -199,11 +199,7 @@ public:
         samples_per_block(0),
         config(*_config)
     {
-        PO_DEBUG("bit_rate=%d complexity=%d packet_rate=%d ms",
-            config.bit_rate,
-            config.complexity,
-            config.packet_rate);
-
+        ASSERT(config.encode || config.decode); // must request encoder and/or decoder
         if (config.encode)
         {
             make_encoder();

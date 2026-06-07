@@ -75,4 +75,7 @@ openocd:
 gdb:
 	~/.platformio/tools/tool-xtensa-esp-elf-gdb/bin/xtensa-esp32-elf-gdb
 
+gdb-local:
+	gdb -nh -x .gdbinit.native ./tdd
+
 #	FIN

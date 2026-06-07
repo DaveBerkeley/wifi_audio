@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "panglos/debug.h"
+#include "panglos/time.h"
 
 #include "i2s.h"
 #include "audio_codec.h"
@@ -104,8 +105,12 @@ TEST(Opus, Test)
 
     WavSource wav;
 
-    const bool okay = wav.open("sine.wav");
-    ASSERT(okay);
+    const char *ipath = "sine.wav";
+    //const char *ipath = "all_night_long.wav";
+    const char *opath = "/tmp/a.wav";
+
+    const bool okay = wav.open(ipath);
+    EXPECT_TRUE(okay);
 
     size_t read_samples = codec->samples_per_packet() * 2;
     size_t read_sz = read_samples * sizeof(int16_t);
@@ -115,7 +120,10 @@ TEST(Opus, Test)
 
     Packets packets;
 
-    PO_DEBUG("Encode the WAV file");
+    PO_DEBUG("Encode from WAV file '%s'", ipath);
+
+    panglos::Time::tick_t now = panglos::Time::get();
+    const int period = 10000; // ms tick on Linux
 
     while (!wav.done())
     {
@@ -128,19 +136,37 @@ TEST(Opus, Test)
         size_t c = codec->encode(read_buff, samples, encode_buff, packet_sz);
         //PO_DEBUG("bytes=%d c=%d", (int) bytes, (int) c);
         packets.append(encode_buff, c);
+
+        if (!panglos::Time::elapsed(now, period)) continue;
+        now += period;
+        PO_DEBUG(".");
     }
 
+    WavSink sink;
+
+    bool ok = sink.open(opath);
+    EXPECT_TRUE(ok);
+
+    PO_DEBUG("Decode to WAV file '%s'", opath);
+
+    now = panglos::Time::get();
     while (true)
     {
         Packets::Packet *packet = packets.pop();
         if (!packet) break;
 
         size_t s = codec->decode(packet->payload, packet->size, read_buff, read_sz);
-        PO_DEBUG("s=%d", (int) s);
-
-        // decode
+        EXPECT_TRUE(s > 0);
+        bool ok = sink.write(read_buff, s * 2 * sizeof(int16_t));
+        EXPECT_TRUE(ok);
         delete packet;
+
+        if (!panglos::Time::elapsed(now, period)) continue;
+        now += period;
+        PO_DEBUG(".");
     }
+
+    sink.close();
 
     delete[] read_buff;
     delete[] encode_buff;

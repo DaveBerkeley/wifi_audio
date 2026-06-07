@@ -18,14 +18,17 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *dead)
 {
     ASSERT(src);
     ASSERT(rtp);
+    ASSERT(dead);
     AudioCodec *codec = rtp->get_codec();
     ASSERT(codec);
 
     // allocate a read block for the source data
     size_t ibuff_size = rtp->rx_bytes();
+    // round up to a whole number of samples
+    ibuff_size = (ibuff_size + 3) & ~0x3;
     Allocator *allocator = rtp->get_allocator();
     ASSERT(allocator);
-    int16_t *idata = (int16_t *) allocator->malloc((ibuff_size + 1) / 2);
+    int8_t *idata = (int8_t *) allocator->malloc(ibuff_size);
     //memset(idata, 0, ibuff_size);
     ASSERT(idata);
     const size_t samples = codec->samples_per_packet();
@@ -45,9 +48,9 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *dead)
         {
             size_t todo = ibuff_size - total;
             size_t block = (todo > max_read) ? max_read : todo;
-            src->read(& idata[total], block, idx++);
-            total += block;
-            //PO_DEBUG("read bytes=%d total=%d", (int) block, (int) total);
+            size_t rd = src->read(& idata[total], block, idx++);
+            total += rd;
+            if (!rd) break;
         }
 
         if (!rtp->has_clients())
@@ -64,10 +67,10 @@ void audio_copy(AudioSource *src, RTP_Engine *rtp, bool *dead)
             panglos::Time::msleep(2);
             continue;
         }
-        
+ 
         // compress the data
         uint8_t *odata = block->packet->get_audio();
-        size_t sz = codec->encode(idata, samples, odata, rtp->rx_bytes());
+        size_t sz = codec->encode((int16_t*) idata, samples, odata, rtp->rx_bytes());
         // send the RTP data
         rtp->send(block, sz, samples);
     }
@@ -84,6 +87,7 @@ void run_audio_copy(void *arg)
 {
     ASSERT(arg);
     AudioCopy *ac = (AudioCopy *) arg;
+//*ac->dead = true; /// TODO : remove me!!!!
     audio_copy(ac->src, ac->dst, ac->dead);
 }
 
