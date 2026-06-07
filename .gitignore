@@ -13,3 +13,4 @@ tags
 *.o
 tdd
 .gdbinit
+sine.wav

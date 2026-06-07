@@ -15,7 +15,7 @@ NAME=$(shell git config user.name)
 COPYRIGHT='" (C) ${NAME} "'
 BANNER=src/banner.cpp
 
-all: 
+all:
 	echo "//    ${PROJECT} banner. Auto generated, do not edit" > ${BANNER}
 	echo "const char *banner = {" >> ${BANNER}
 	echo ${PROJECT} | sed 's/_/ /g' | figlet | sed 's/\\/\\\\/g' | awk '//{printf "    \"%s\\r\\n\"\n", $$0}' >> ${BANNER}
@@ -55,7 +55,10 @@ dump:
 	#~/.platformio/packages/toolchain-xtensa-esp32s2/bin/xtensa-esp32s2-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 	#~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 
-tdd:
+sine.wav:
+	./make_sine.py
+
+tdd: sine.wav
 	scons
 
 test: tdd
