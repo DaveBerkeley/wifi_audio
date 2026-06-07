@@ -5,8 +5,13 @@
 #include <string.h>
 
 #include "panglos/debug.h"
+#include "panglos/verbose.h"
+
+using namespace panglos;
 
 #include "rtsp.h"
+
+static VERBOSE(rtsp, "rtsp", false);
 
     /*
      *
@@ -204,7 +209,7 @@ public:
 
     bool parse_transport_option(struct RtspHeader::Transport *hdr, char *option)
     {
-        PO_DEBUG("'%s'", option);
+        if (rtsp.verbose) PO_DEBUG("'%s'", option);
 
         struct Binaries {
             const char *cmd;
@@ -257,7 +262,7 @@ public:
             if (!get_number(& r->values[1], option, & end))
                 return false;
 
-            PO_DEBUG("%s %d,%d", r->cmd, r->values[0], r->values[1]);
+            if (rtsp.verbose) PO_DEBUG("%s %d,%d", r->cmd, r->values[0], r->values[1]);
             return true;
         }
 
@@ -386,7 +391,7 @@ public:
         for (int idx = 0; idx < RtspHeader::MAX_TRANSPORTS; idx++)
         {
             if (!lines[idx]) break;
-            PO_DEBUG("parse transport spec.");
+            if (rtsp.verbose) PO_DEBUG("parse transport spec.");
 
             // set defaults
             hdr->transport[idx].transport = "UDP";
@@ -404,7 +409,7 @@ public:
             char *transport = strtok_r(0, "/", & t_save);
             if (transport) hdr->transport[idx].transport = transport;
 
-            PO_DEBUG("'%s/%s/%s'", protocol, profile, hdr->transport[idx].transport);
+            if (rtsp.verbose) PO_DEBUG("'%s/%s/%s'", protocol, profile, hdr->transport[idx].transport);
 
             // read the parameters
             while (!!(s = strtok_r(0, ";", & l_save)))
@@ -427,7 +432,7 @@ public:
             char *save = 0;
             char *header = strtok_r(line, " ", & save);
             if (!header) break;
-            PO_DEBUG("%s", header);
+            if (rtsp.verbose) PO_DEBUG("%s", header);
 
             if (!strncasecmp(header, "CSeq:", 5))
             {
@@ -462,7 +467,7 @@ public:
             }
             else
             {
-                PO_DEBUG("no parser for '%s'", header);
+                if (rtsp.verbose) PO_DEBUG("no parser for '%s'", header);
             }
         }
         return true;
@@ -505,7 +510,7 @@ public:
         char *save = 0;
         char *cmd = strtok_r(line, " ", & save);
         if (!cmd) handler->error(E_Bad_Request);
-        PO_DEBUG("%s", cmd);
+        if (rtsp.verbose) PO_DEBUG("%s", cmd);
         RtspCommand rtsp_cmd = (RtspCommand) rlut(cmd_lut, cmd);
 
         if (rtsp_cmd == C_UNKNOWN)
@@ -521,7 +526,7 @@ public:
                 return handler->error(E_Bad_Request);
         }
 
-        PO_DEBUG("%s", cmd);
+        if (rtsp.verbose) PO_DEBUG("%s", cmd);
 
         // Check if the command is permitted in this state
         if (code == E_OK)

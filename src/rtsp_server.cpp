@@ -5,6 +5,7 @@
 #include <errno.h>
 
 #include "panglos/debug.h"
+#include "panglos/verbose.h"
 
 #include "sockets.h"
 
@@ -13,6 +14,8 @@
 #include "audio_codec.h"
 
 using namespace panglos;
+
+static VERBOSE(rtsp, "rtsp_server", false);
 
     /*
      *
@@ -89,7 +92,7 @@ int RTSP_Handler::get_last_error()
 
 void RTSP_Handler::flush()
 {
-    PO_DEBUG("sz=%d", out->get_idx());
+    if (rtsp.verbose) PO_DEBUG("sz=%d", out->get_idx());
     socket->send((uint8_t*) buff, size_t(out->get_idx()));
     out->reset();
 }
@@ -181,7 +184,7 @@ char *RTSP_Handler::get_ip(panglos::Socket *)
 
     char ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, & addr.sin_addr, ip, sizeof(ip));
-    PO_DEBUG("ip=%s", ip);
+    if (rtsp.verbose) PO_DEBUG("ip=%s", ip);
     return strdup(ip);
 }
 
@@ -404,7 +407,7 @@ class RtspClient : public Client
         while (session->get_state() != RTSP_Session::DEAD)
         {
             int size = sock->recv((uint8_t*) & buff[idx], sz - size_t(idx));
-            PO_DEBUG("size=%d idx=%d sum=%d", size, idx, size + idx);
+            if (rtsp.verbose) PO_DEBUG("size=%d idx=%d sum=%d", size, idx, size + idx);
             if (size <= 0) break;
 
             // check for complete message
@@ -417,7 +420,7 @@ class RtspClient : public Client
             }
 
             char *content = search("Content-Length: ");
-            PO_DEBUG("block=%p content=%p", block, content);
+            if (rtsp.verbose) PO_DEBUG("block=%p content=%p", block, content);
 
             size_t end = 0;
             if (content)
@@ -433,7 +436,7 @@ class RtspClient : public Client
 
             ASSERT(end);
             dump((uint8_t*) buff, idx);
-            PO_DEBUG("process size=%d", (int) end);
+            if (rtsp.verbose) PO_DEBUG("process size=%d", (int) end);
             const RtspCommand cmd = session->process(buff, end);
             if (cmd == C_KILL)
             {
