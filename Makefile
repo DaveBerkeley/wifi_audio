@@ -50,6 +50,9 @@ clean:
 cleanx:
 	find .pio -name "*.o" | grep panglos | xargs rm
 
+cleanlib:
+	scons -c third_party/build/libopus.a
+
 dump:
 	~/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 	#~/.platformio/packages/toolchain-xtensa-esp32s2/bin/xtensa-esp32s2-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
