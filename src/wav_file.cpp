@@ -39,11 +39,13 @@ static FILE* error(const char *text, int err)
 
 WavSource::WavSource(size_t _limit)
 :   size(0),
-    limit(_limit),
+    //limit(_limit),
     file(0),
     on_done(0),
     on_done_arg(0)
-{ }
+{
+    UNUSED(_limit);
+}
 
 WavSource::~WavSource()
 {
@@ -63,7 +65,7 @@ bool WavSource::open(const char *path)
     if (err < 0)
         return error("stat()", errno);
 
-    size = st.st_size;
+    size = size_t(st.st_size);
     PO_DEBUG("path=%s size=%d", path, (int) size);
 
     file = fopen(path, "rb");

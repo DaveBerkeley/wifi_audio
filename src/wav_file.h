@@ -6,7 +6,7 @@
 class WavSource : public AudioSource
 {
     size_t size;
-    size_t limit;
+    //size_t limit;
     FILE* file;
     void (*on_done)(void *);
     void *on_done_arg;

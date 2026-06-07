@@ -55,14 +55,14 @@ void _server(void *arg)
     Objects::objects->add("rtp", rtp);
 
     // The Opus encoder needs more stack
-    Thread *thread = Thread::create("rtp", 8000, Thread::High);
+    Thread *encoder_thread = Thread::create("encode", 8000, Thread::High);
     bool dead = false;
     struct AudioCopy ac = {
         .src = info->audio_source, 
         .dst = rtp,
         .dead = & dead,
     };
-    thread->start(run_audio_copy, & ac, CPU_CORE);
+    encoder_thread->start(run_audio_copy, & ac, CPU_CORE);
 
     // blocking call to run server
     SID sid;
@@ -76,8 +76,8 @@ void _server(void *arg)
     // kill the RTP thread too
     PO_INFO("Kill RTP Thread");
     dead = true;
-    thread->join();
-    delete thread;
+    encoder_thread->join();
+    delete encoder_thread;
     delete rtp;
     PO_INFO("RTSP/RTP shut down");
 
@@ -118,7 +118,7 @@ static void cmd_rtp(CLI *cli, CliCommand *)
 void add_rtp_commands(CLI *cli)
 {
     static CliCommand cmd = { "rtp", cmd_rtp, "list rtp clients", 0, 0, 0 };
-    cli_insert(cli, & cli->head, & cmd);
+    cli_append(cli, & cmd);
 }
 
 //  FIN

@@ -80,7 +80,7 @@ class OpusCodec : public AudioCodec
 
         int size = opus_decoder_get_size(channels);
 
-        decoder = (OpusDecoder*)malloc(size);
+        decoder = (OpusDecoder*)malloc(size_t(size));
         ASSERT(decoder);
 
         int err = opus_decoder_init(decoder, 48000, channels);
@@ -187,8 +187,8 @@ class OpusCodec : public AudioCodec
     virtual size_t decode(const uint8_t *src, size_t ibytes, int16_t *dst, size_t obytes) override
     {
         ASSERT(decoder);
-        size_t samples = opus_decode(decoder, src, (opus_int32) ibytes, dst, (int) obytes, 0);
-        return samples;
+        const int samples = opus_decode(decoder, src, (opus_int32) ibytes, dst, (int) obytes, 0);
+        return size_t(samples);
     }
 
 public:

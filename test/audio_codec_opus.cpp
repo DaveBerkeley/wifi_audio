@@ -114,7 +114,7 @@ TEST(Opus, Test)
 
     size_t read_samples = codec->samples_per_packet() * 2;
     size_t read_sz = read_samples * sizeof(int16_t);
-    int16_t *read_buff = new int16_t[read_samples];
+    int8_t *read_buff = new int8_t[read_sz];
     size_t packet_sz = codec->max_payload_size();
     uint8_t *encode_buff = new uint8_t[packet_sz];
 
@@ -128,12 +128,14 @@ TEST(Opus, Test)
     while (!wav.done())
     {
         size_t bytes = wav.read(read_buff, read_sz, 0);
+        if (!bytes)
+            break;
         size_t samples = bytes / (2 * sizeof(int16_t));
 
         if (samples != codec->samples_per_packet())
             break; // must have complete set of samples for a packet
 
-        size_t c = codec->encode(read_buff, samples, encode_buff, packet_sz);
+        size_t c = codec->encode((int16_t*)read_buff, samples, encode_buff, packet_sz);
         //PO_DEBUG("bytes=%d c=%d", (int) bytes, (int) c);
         packets.append(encode_buff, c);
 
@@ -155,7 +157,7 @@ TEST(Opus, Test)
         Packets::Packet *packet = packets.pop();
         if (!packet) break;
 
-        size_t s = codec->decode(packet->payload, packet->size, read_buff, read_sz);
+        size_t s = codec->decode(packet->payload, packet->size, (int16_t*) read_buff, read_sz);
         EXPECT_TRUE(s > 0);
         bool ok = sink.write(read_buff, s * 2 * sizeof(int16_t));
         EXPECT_TRUE(ok);
