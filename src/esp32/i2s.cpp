@@ -1,4 +1,5 @@
 
+#include "esp_attr.h"
 #include "driver/i2s_std.h"
 #include "driver/gpio.h"
 
@@ -14,6 +15,18 @@ using namespace panglos;
      *
      */
 
+static IRAM_ATTR bool rx_overflow(i2s_chan_handle_t, i2s_event_data_t *, void *ctx)
+{
+    ASSERT(ctx);
+    ESP32_I2S *i2s = (ESP32_I2S *) ctx;
+    i2s->on_rx_error();
+    return false;
+}
+
+    /*
+     *
+     */
+
 bool ESP32_I2S::error(const char *text, int err)
 {
     if (err == ESP_OK) return false;
@@ -21,7 +34,15 @@ bool ESP32_I2S::error(const char *text, int err)
     return true;
 }
 
-ESP32_I2S::ESP32_I2S() { }
+    /*
+     *
+     */
+
+ESP32_I2S::ESP32_I2S()
+:   errors(0),
+    running(false)
+{
+}
 
 bool ESP32_I2S::init(const ESP32_I2S::Config *config)
 {
@@ -57,21 +78,26 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
         },
     };
 
-    //switch (config->slot_bits)
-    //{
-    //    case 24: std_cfg.clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_384; break;
-    //    default: break;
-    //}
-
     // byte-swap for systems that want little-endian native data
     std_cfg.slot_cfg.big_endian = config->byte_swap;
-    // set the bits per audo sample and the I2S bits per half frame
+
+    // set the bits per audio sample and the I2S bits per half frame
     std_cfg.slot_cfg.data_bit_width = (i2s_data_bit_width_t) config->bits;
     std_cfg.slot_cfg.slot_bit_width = (i2s_slot_bit_width_t) config->slot_bits;
 
     // Apply the I2S configuration to the channel
     err = i2s_channel_init_std_mode(handle, & std_cfg);
     if (error("i2s_channel_init_std_mode()", err))
+        return false;
+
+    i2s_event_callbacks_t cbs = {
+        .on_recv = NULL,
+        .on_recv_q_ovf = rx_overflow,
+        .on_sent = NULL,
+        .on_send_q_ovf = NULL,
+    };
+    err = i2s_channel_register_event_callback(handle, & cbs, this);
+    if (error("i2s_channel_register_event_callback()", err))
         return false;
 
     err = i2s_channel_enable(handle);
@@ -81,9 +107,8 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
     return true;
 }
 
-size_t ESP32_I2S::read(void *dest, size_t bytes, int idx) 
+size_t ESP32_I2S::read(void *dest, size_t bytes, int) 
 {
-    UNUSED(idx);
     ASSERT(bytes <= max_read_bytes());
     // Blocking Read
     size_t bytes_read;
@@ -93,6 +118,7 @@ size_t ESP32_I2S::read(void *dest, size_t bytes, int idx)
     if (error("i2s_channel_read()", err))
         return 0;
 
+    running = true;
     return bytes_read;
 }
 
@@ -100,6 +126,12 @@ size_t ESP32_I2S::max_read_bytes()
 {
     return 4064; // Hard limit on DMA buffer size, rounded down to 32-byte boundary
     //return 4092; // Hard limit on DMA buffer size
+}
+
+void ESP32_I2S::on_rx_error()
+{
+    if (!running) return;
+    errors += 1;
 }
 
     /*

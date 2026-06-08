@@ -118,11 +118,17 @@ static void cmd_rtp(CLI *cli, CliCommand *)
     {
         RTP_Client *client = rtp->get_client(idx);
         if (!client) continue;
-        cli_print(cli, "client=%p: packets=%d errors=%d%s", 
+        cli_print(cli, "client=%p: packets=%d tx errors=%d%s", 
             client, 
             client->get_num_packets(), 
             client->get_num_errors(), 
             cli->eol);
+    }
+
+    I2S *i2s = (I2S*) Objects::objects->get("i2s");
+    if (i2s)
+    {
+        cli_print(cli, "i2s rx errors=%d%s", i2s->rx_errors(), cli->eol);
     }
 }
 
