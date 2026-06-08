@@ -39,6 +39,7 @@ public:
      */
 
 #define CPU_CORE 0 // -1 for "no affinity"
+#define CPU_AUX  1 // -1 for "no affinity"
 
 void _server(void *arg)
 {
@@ -54,14 +55,21 @@ void _server(void *arg)
     RTP_Engine *rtp = new RTP_Engine(info->codec, info->rtp_ports[0], info->rtp_ports[1], num_buffers, info->allocator);
     Objects::objects->add("rtp", rtp);
 
-    // The Opus encoder needs more stack
-    Thread *encoder_thread = Thread::create("encode", 8000, Thread::High);
     bool dead = false;
     struct AudioCopy ac = {
         .src = info->audio_source, 
-        .dst = rtp,
+        .rtp = rtp,
+        .reader = 0,
         .dead = & dead,
     };
+
+    Thread *i2s_reader = Thread::create("i2s", 0, Thread::High);
+    Reader *reader = Reader::create(& ac);
+    ac.reader = reader;
+    i2s_reader->start(Reader::run_reader, & ac, CPU_AUX);
+
+    // The Opus encoder needs more stack
+    Thread *encoder_thread = Thread::create("encode", 6000, Thread::High);
     encoder_thread->start(run_audio_copy, & ac, CPU_CORE);
 
     // blocking call to run server
@@ -78,6 +86,9 @@ void _server(void *arg)
     dead = true;
     encoder_thread->join();
     delete encoder_thread;
+    i2s_reader->join();
+    delete i2s_reader;
+    delete reader;
     delete rtp;
     PO_INFO("RTSP/RTP shut down");
 

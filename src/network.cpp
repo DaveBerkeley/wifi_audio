@@ -189,7 +189,7 @@ static bool add_ap(WiFiInterface *iface, const char *_ssid, const char *_pw)
     size_t s = sizeof(ssid);
     if (!db.get(_ssid, ssid, & s))
     {
-        PO_ERROR("no ssid defined");
+        PO_INFO("no ssid defined for k=%s", _ssid);
         return false;
     }
 
@@ -197,7 +197,7 @@ static bool add_ap(WiFiInterface *iface, const char *_ssid, const char *_pw)
     s = sizeof(pw);
     if (!db.get(_pw, pw, & s))
     {
-        PO_ERROR("no pw defined");
+        PO_ERROR("no pw defined for ssid=%s", ssid);
         return false;
     }
 

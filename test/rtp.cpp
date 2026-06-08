@@ -73,8 +73,20 @@ TEST(RTP, AudioCopy)
     bool dead = false;
     wav.set_on_done(on_done, & dead);
 
-    audio_copy(& wav, rtp, & dead);
+    struct AudioCopy ac = {
+        .src= & wav,
+        .rtp = rtp,
+        .dead = & dead,
+        .poll_reader = true,
+    };
 
+    Reader *reader = Reader::create(& ac);
+    EXPECT_TRUE(reader);
+    ac.reader = reader;
+
+    audio_copy(& ac);
+
+    delete reader;
     delete rtp;
     delete codec;
 }
