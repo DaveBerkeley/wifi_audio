@@ -131,7 +131,7 @@ static AudioCodec *make_opus()
     Storage db("opus");
 
     int32_t bit_rate = 96000;
-    int32_t complexity = 8;
+    int32_t complexity = 5;
     int32_t packet_rate = 60; // ms
 
     struct Param params[] = {
