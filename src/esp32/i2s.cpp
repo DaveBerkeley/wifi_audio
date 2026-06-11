@@ -40,6 +40,7 @@ bool ESP32_I2S::error(const char *text, int err)
 
 ESP32_I2S::ESP32_I2S()
 :   errors(0),
+    bytes(0),
     running(false)
 {
 }
@@ -119,6 +120,7 @@ size_t ESP32_I2S::read(void *dest, size_t bytes, int)
         return 0;
 
     running = true;
+    bytes += bytes_read;
     return bytes_read;
 }
 

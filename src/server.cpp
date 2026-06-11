@@ -128,7 +128,8 @@ static void cmd_rtp(CLI *cli, CliCommand *)
     I2S *i2s = (I2S*) Objects::objects->get("i2s");
     if (i2s)
     {
-        cli_print(cli, "i2s rx errors=%d%s", i2s->rx_errors(), cli->eol);
+        cli_print(cli, "i2s rx bytes=%d errors=%d%s", 
+                i2s->rx_bytes(), i2s->rx_errors(), cli->eol);
     }
 }
 
