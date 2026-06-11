@@ -133,11 +133,17 @@ static AudioCodec *make_opus()
     int32_t bit_rate = 96000;
     int32_t complexity = 5;
     int32_t packet_rate = 60; // ms
+    int32_t fs = 48000; // Hz
+    int32_t chans = 2;
+    int32_t app = OpusConfig::OP_AUDIO;
 
     struct Param params[] = {
         {   "bit_rate", & bit_rate },
         {   "complexity", & complexity },
         {   "packet_rate", & packet_rate },
+        {   "fs", & fs },
+        {   "chans", & chans },
+        {   "app", & app },
         { 0, 0 },
     };
  
@@ -147,6 +153,9 @@ static AudioCodec *make_opus()
         .bit_rate    = (uint32_t) bit_rate,
         .complexity  = (uint32_t) complexity,
         .packet_rate = (uint32_t) packet_rate, // ms
+        .fs = (uint32_t) fs,
+        .chans = (uint32_t) chans,
+        .app = (OpusConfig::Application) app,
         .encode = true,
     };
 

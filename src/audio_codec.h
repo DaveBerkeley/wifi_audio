@@ -14,9 +14,17 @@ struct PcmConfig
 
 struct OpusConfig
 {
-    uint32_t    bit_rate;      // eg 96000 bps
-    uint32_t    complexity;    // 0 .. 10
-    uint32_t    packet_rate;   // in ms { 3 (2.5), 5, 10, 20, 40, 60, 120 }
+    enum Application {
+        OP_AUDIO = 1,
+        OP_VOIP = 2,
+    };
+
+    uint32_t    bit_rate;       // eg 96000 bps
+    uint32_t    complexity;     // 0 .. 10
+    uint32_t    packet_rate;    // in ms { 3 (2.5), 5, 10, 20, 40, 60, 120 }
+    uint32_t    fs;             // Sample Frequency in Hz
+    uint32_t    chans;          // number of channels
+    enum Application app;       // AUDIO | VOIP
     bool        encode;
     bool        decode;
 };

@@ -117,6 +117,9 @@ static struct OpusConfig codec_config = {
     .bit_rate = 96000,
     .complexity = 8,
     .packet_rate = 40, // ms
+    .fs = 48000,
+    .chans = 2,
+    .app = OpusConfig::OP_AUDIO,
     .encode = true,
 };
 #endif

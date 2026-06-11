@@ -62,6 +62,9 @@ TEST(RTP, AudioCopy)
         .bit_rate = 96000,
         .complexity = 8,
         .packet_rate = 60,
+        .fs = 48000,
+        .chans = 2,
+        .app = OpusConfig::OP_AUDIO,
         .encode = true,
         .decode = false,
     };

@@ -31,6 +31,13 @@ extern "C" {
      *
      */
 
+static int _app(OpusConfig::Application app)
+{
+    if (app == OpusConfig::OP_AUDIO) return OPUS_APPLICATION_AUDIO;
+    if (app == OpusConfig::OP_VOIP) return OPUS_APPLICATION_VOIP;
+    ASSERT(0); return -1;
+}
+
 class OpusCodec : public AudioCodec
 {
     OpusEncoder *encoder;
@@ -48,7 +55,7 @@ class OpusCodec : public AudioCodec
             config.packet_rate);
 
         int err = OPUS_OK;
-        encoder = opus_encoder_create(48000, channels, OPUS_APPLICATION_AUDIO, & err);
+        encoder = opus_encoder_create(config.fs, config.chans, _app(config.app), & err);
         if (err != OPUS_OK)
         {
             error(err, "opus_encoder_create()");
@@ -78,12 +85,12 @@ class OpusCodec : public AudioCodec
             config.complexity,
             config.packet_rate);
 
-        int size = opus_decoder_get_size(channels);
+        int size = opus_decoder_get_size(config.chans);
 
         decoder = (OpusDecoder*)malloc(size_t(size));
         ASSERT(decoder);
 
-        int err = opus_decoder_init(decoder, 48000, channels);
+        int err = opus_decoder_init(decoder, config.fs, config.chans);
         if (err != OPUS_OK)
         {
             error(err, "opus_encoder_create()");
@@ -108,6 +115,7 @@ class OpusCodec : public AudioCodec
             // "a=fmtp:%d maxplaybackrate=16000; stereo=1\r\n"
             // "a=ptime=20\r\n"
             // "a=maxptime=120\r\n"
+            "a=fmtp:%d stereo=%d\r\n"
             ;
 
         // Note the 'L' in "L16/48000/2" means 'large' ie big-endian, not little!
@@ -115,7 +123,12 @@ class OpusCodec : public AudioCodec
         const size_t size = 1024;
         char *buff = new char[size];
 
-        snprintf(buff, size, fmt, get_payload_type(), get_payload_type());
+        snprintf(buff, size, fmt, 
+                get_payload_type(), 
+                get_payload_type(), 
+                get_payload_type(),
+                (config.chans == 2) ? 1 : 0
+                );
         sdp_fmt = strdup(buff);
         delete[] buff;
     }
@@ -153,7 +166,7 @@ class OpusCodec : public AudioCodec
 
     virtual size_t num_chans() override
     {
-        return 2;
+        return config.chans;
     }
 
     virtual size_t data_size() override
@@ -231,6 +244,9 @@ AudioCodec *AudioCodec::create(struct OpusConfig *config)
     ASSERT(config);
     ASSERT((config->bit_rate >= 6000) && (config->bit_rate <= 510000));
     ASSERT(config->complexity < 11);
+    ASSERT(config->fs);
+    ASSERT((config->chans > 0) && (config->chans < 3));
+    ASSERT((config->app == OpusConfig::OP_AUDIO) || (config->app == OpusConfig::OP_VOIP));
     return new OpusCodec(config);
 }
 
