@@ -10,34 +10,37 @@
 #include "panglos/object.h"
 
 #include "panglos/esp32/gpio.h"
+#include "panglos/esp32/rmt_strip.h"
 
 #include "panglos/app/devices.h"
 
 #include "board.h"
-#include "fs.h"
+//#include "fs.h"
 
 #include "esp32/init.h"
 
 using namespace panglos;
 
-#if defined(ESP32_S3_DKC1)
+#if defined(ESP32_S3_DKC1) || defined(ESP32_S3_DKC2)
 
 #define SCK GPIO_NUM_42
 #define WS GPIO_NUM_2
 #define SD GPIO_NUM_1
 
-//#define RGB GPIO_NUM_11
-// Dammit, I've used the RGB LED for +5V I2C, so probably blown it up.
-//#define RGB GPIO_NUM_38
+#if defined(ESP32_S3_DKC1)
+// but I've blown up the LED device on my dev board ...
+#define RGB GPIO_NUM_38
+#endif
+#if defined(ESP32_S3_DKC2)
+#define RGB GPIO_NUM_48
 
-#define DEBUG_PIN GPIO_NUM_10
 
-#define SDCARD_MISO  GPIO_NUM_41
-#define SDCARD_MOSI  GPIO_NUM_40
-#define SDCARD_CLK   GPIO_NUM_39
-#define SDCARD_CS    GPIO_NUM_42
+#endif
 
-static const GPIO_DEF debug_def = { DEBUG_PIN, ESP_GPIO::OP };
+//#define SDCARD_MISO  GPIO_NUM_41
+//#define SDCARD_MOSI  GPIO_NUM_40
+//#define SDCARD_CLK   GPIO_NUM_39
+//#define SDCARD_CS    GPIO_NUM_42
 
     /*
      *
@@ -45,12 +48,21 @@ static const GPIO_DEF debug_def = { DEBUG_PIN, ESP_GPIO::OP };
 
 static Device _board_devs[] = {
     //DEV_GPIO("led", 0, & led_def),
-    DEV_GPIO("dbg", 0, & debug_def),
     Device(0, 0, 0, 0, 0),
 };
 
 void board_init()
 {
+#if defined(RGB)
+    RmtLedStrip *leds = RmtLedStrip::create(1);
+    bool ok = leds->init(0, RGB);
+    ASSERT(ok);
+    Objects::objects->add("rgb", leds);
+
+    leds->set_all(0x8, 0x8, 0x8);
+    leds->send();
+#endif
+
     board_init(SCK, WS, SD);
 
 #if 0

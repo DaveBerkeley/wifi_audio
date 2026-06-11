@@ -181,35 +181,8 @@ static int send_packet(RTP_Client *client, void *arg)
     return 0;
 }
 
-#if defined(ESP32)
-#include "panglos/drivers/gpio.h"
-#include "panglos/object.h"
-
-static void TRACE()
-{
-    static panglos::GPIO *gpio = 0;
-    static bool first = true;
-    if (first && !gpio)
-    {
-        gpio = (panglos::GPIO*) panglos::Objects::objects->get("dbg");
-        first = false;
-    }
-    if (gpio)
-    {
-        gpio->toggle();
-    }
-}
-
-#else
-
-#define TRACE()
-
-#endif
-
 int RTP_Engine::send(struct Block *block, size_t bytes, size_t samples)
 {
-    TRACE();
-
     //PO_DEBUG("max_payload=%d bytes=%d", (int) block->max_payload, (int) bytes);
     ASSERT(block->max_payload >= bytes); // not enough space for payload
     // increment the seq id
