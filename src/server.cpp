@@ -68,8 +68,7 @@ void _server(void *arg)
     ac.reader = reader;
     i2s_reader->start(Reader::run_reader, & ac, CPU_AUX);
 
-    // The Opus encoder needs more stack
-    Thread *encoder_thread = Thread::create("encode", 6000, Thread::High);
+    Thread *encoder_thread = Thread::create("encode", 0, Thread::High);
     encoder_thread->start(run_audio_copy, & ac, CPU_CORE);
 
     // blocking call to run server

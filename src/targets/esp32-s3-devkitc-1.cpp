@@ -29,10 +29,10 @@ using namespace panglos;
 
 #if defined(ESP32_S3_DKC1)
 // but I've blown up the LED device on my dev board ...
-#define RGB GPIO_NUM_38
+#define RGB_GPIO GPIO_NUM_38
 #endif
 #if defined(ESP32_S3_DKC2)
-#define RGB GPIO_NUM_48
+#define RGB_GPIO GPIO_NUM_48
 
 
 #endif
@@ -47,23 +47,69 @@ using namespace panglos;
      */
 
 static Device _board_devs[] = {
-    //DEV_GPIO("led", 0, & led_def),
     Device(0, 0, 0, 0, 0),
 };
 
 class Callback : public RTSP_Status
 {
-    virtual void on_state(RTSP_Session::State state) override
+    RmtLedStrip *leds;
+    Mutex *mutex;
+
+    typedef RTSP_Session::State State;
+    typedef struct LedStrip::RGB RGB;
+
+    static bool to_rgb(State state, RGB *rgb)
+    {
+        ASSERT(rgb);
+        switch (state)
+        {
+            case RTSP_Session::INIT  :  return false;
+            case RTSP_Session::READY :  rgb->b = 0x40;   break;
+            case RTSP_Session::PLAY  :  rgb->g = 0x40;   break;
+            case RTSP_Session::DEAD  :  break; // all off
+            default : ASSERT(0);
+        }
+
+        return true;
+    }
+
+    virtual void on_state(State state) override
     {
         PO_DEBUG("state=%d", state);
+        RGB rgb = { 0 };
+        if (to_rgb(state, & rgb))
+        {
+            Lock lock(mutex);
+            leds->set_all(rgb.r, rgb.g, rgb.b);
+            leds->send();
+        }
+    }
+
+public:
+
+    Callback(RmtLedStrip *_leds)
+    :   leds(_leds),
+        mutex(0)
+    {
+        ASSERT(leds);
+        mutex = Mutex::create();
+    }
+
+    ~Callback()
+    {
+        delete mutex;
     }
 };
 
+    /*
+     *
+     */
+
 void board_init()
 {
-#if defined(RGB)
+#if defined(RGB_GPIO)
     RmtLedStrip *leds = RmtLedStrip::create(1);
-    bool ok = leds->init(0, RGB);
+    bool ok = leds->init(0, RGB_GPIO);
     ASSERT(ok);
     Objects::objects->add("rgb", leds);
 
@@ -71,7 +117,7 @@ void board_init()
     leds->send();
 #endif
 
-    static Callback cb;
+    static Callback cb(leds);
     board_init(& cb, SCK, WS, SD);
 
 #if 0

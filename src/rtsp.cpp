@@ -657,6 +657,7 @@ class Session : public RTSP_Session
             }
             case DEAD :
             {
+                set_state(DEAD);
                 return C_UNKNOWN;
             }
             default : ASSERT(0);
@@ -670,7 +671,6 @@ public:
     :   handler(h),
         cb(_cb)
     {
-        PO_DEBUG("cb=%p", cb);
         set_state(INIT);
     }
 };

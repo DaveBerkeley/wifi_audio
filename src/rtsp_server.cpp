@@ -388,6 +388,7 @@ class RtspClient : public Client
     RTP_Engine *rtp;
     RTSP_Handler *handler;
     RTSP_Session *session;
+    RTSP_Status *cb;
     char *buff;
     size_t sz;
     int idx;
@@ -450,15 +451,17 @@ class RtspClient : public Client
         }
 
         handler->terminate();
+        if (cb) cb->on_state(RTSP_Session::DEAD);
         PO_DEBUG("DONE");
     }
 
 public:
-    RtspClient(SocketServer *ss, RTP_Engine *r, RTSP_Status *cb, AudioCodec *codec, const char *ip, uint32_t sid)
+    RtspClient(SocketServer *ss, RTP_Engine *r, RTSP_Status *_cb, AudioCodec *codec, const char *ip, uint32_t sid)
     :   Client(ss),
         rtp(r),
         handler(0),
         session(0),
+        cb(_cb),
         buff(0),
         sz(2048),
         idx(0)
