@@ -19,6 +19,8 @@
 #include "board.h"
 
 #include "esp32/init.h"
+#include "esp32/rmt_led.h"
+
 #include "status.h"
 
 using namespace panglos;
@@ -37,31 +39,6 @@ using namespace panglos;
 #if defined(ESP32_S3_DKC2)
 #define RGB_GPIO GPIO_NUM_48
 #endif
-
-    /*
-     *
-     */
-
-struct LedsDef {
-    uint32_t pin;
-    int n;
-    RmtLedStrip::Type type;
-};
-
-static bool leds_init(Device *dev, void *arg)
-{
-    PO_DEBUG("");
-    ASSERT(arg);
-    struct LedsDef *def= (struct LedsDef*) arg;
-
-    RmtLedStrip *leds = RmtLedStrip::create(def->n, 24, def->type);
-    ASSERT(leds);
-    const bool ok = leds->init(0, def->pin);
-    leds->set_all(0x10, 0x10, 0x10);
-    leds->send();
-    dev->add(Objects::objects, leds);
-    return ok;
-}
 
     /*
      *
