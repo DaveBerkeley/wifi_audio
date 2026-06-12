@@ -18,7 +18,7 @@ public:
 
 class AudioCodec;
 
-void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, AudioCodec *codec, SidGenerator *gen=0);
+void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, RTSP_Status *cb, AudioCodec *codec, SidGenerator *gen=0);
 
     /*
      *

@@ -567,6 +567,7 @@ public:
 class Session : public RTSP_Session
 {
     RTSP_Session::Handler *handler;
+    RTSP_Status *cb;
 
     enum State state;
 
@@ -588,6 +589,7 @@ class Session : public RTSP_Session
         };
 
         PO_DEBUG("state:=%s", lut(states, state));
+        if (cb) cb->on_state(state);
     }
 
     const RtspCommand *allowable()
@@ -664,9 +666,11 @@ class Session : public RTSP_Session
     }
 
 public:
-    Session(RTSP_Session::Handler *h)
-    :   handler(h)
+    Session(RTSP_Session::Handler *h, RTSP_Status *_cb)
+    :   handler(h),
+        cb(_cb)
     {
+        PO_DEBUG("cb=%p", cb);
         set_state(INIT);
     }
 };
@@ -675,9 +679,9 @@ public:
      *
      */
 
-RTSP_Session *RTSP_Session::create(RTSP_Session::Handler *h)
+RTSP_Session *RTSP_Session::create(RTSP_Session::Handler *h, RTSP_Status *cb)
 {
-    return new Session(h);
+    return new Session(h, cb);
 }
 
 //  FIN

@@ -2,14 +2,13 @@
 RTSP/RTP Streaming of I2S audio for the ESP32.
 ----
 
-Still under development ..
-
 Written using my 
 [panglos](https://github.com/DaveBerkeley/panglos)
 framework.
 
 It runs RTSP and RTP servers on an ESP32-S3 target.
 This code can also be tested and run on Linux as it is target agnostic.
+I use the S3 device as it ia dual core and has a higher clock speed than other varients.
 
 I2S audio data can be received by the ESP32 and transmitted over WiFi.
 

@@ -85,6 +85,8 @@ extern const LUT cmd_lut[];
      *
      */
 
+class RTSP_Status;
+
 class RTSP_Session
 {
 public:
@@ -111,7 +113,19 @@ public:
     virtual RtspCommand process(char *data, size_t s) = 0;
     virtual enum State get_state() = 0;
 
-    static RTSP_Session *create(Handler *h);
+    static RTSP_Session *create(Handler *h, RTSP_Status *cb);
+};
+
+    /*
+     *
+     */
+
+class RTSP_Status
+{
+public:
+    virtual ~RTSP_Status() {}
+
+    virtual void on_state(RTSP_Session::State state) = 0;
 };
 
 //  FIN

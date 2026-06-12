@@ -26,6 +26,7 @@ using namespace panglos;
 #include "esp32/i2s.h"
 #include "audio_codec.h"
 #include "rtp.h"
+#include "rtsp.h"
 
 class HeapAllocator : public Allocator
 {
@@ -54,19 +55,28 @@ static struct PcmConfig pcm_config = {
     .freq = 48000,
 };
 
+struct SystemConfig
+{
+    AudioCodec *codec;
+    RTSP_Status *cb;
+};
+
 static bool rtp_init(void *arg, Event *, Event::Queue *)
 {
     PO_DEBUG("");
     ASSERT(arg);
 
+    struct SystemConfig *config = (struct SystemConfig *) arg;
+
     I2S *i2s = (I2S*) Objects::objects->get("i2s");
     ASSERT(i2s);
 
-    AudioCodec *codec = (AudioCodec*) arg;
+    AudioCodec *codec = config->codec;
     ASSERT(codec);
     info.codec = codec;
     info.allocator = new HeapAllocator;
     info.audio_source = i2s;
+    info.cb = config->cb;
     run_server_thread(& info);
 
     CLI *cli = (CLI*) Objects::objects->get("cli");
@@ -230,7 +240,7 @@ static I2S *make_i2s(AudioCodec *codec, gpio_num_t sck, gpio_num_t ws, gpio_num_
      *
      */
 
-void board_init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
+void board_init(RTSP_Status *cb, gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
 {
     PO_DEBUG("");
 
@@ -256,7 +266,12 @@ void board_init(gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
 
     Objects::objects->add("i2s", i2s);
 
-    EventHandler::add_handler(Event::INIT, rtp_init, codec);    
+    static SystemConfig config = {
+        .codec = codec,
+        .cb = cb,
+    };
+
+    EventHandler::add_handler(Event::INIT, rtp_init, & config);
     EventHandler::add_handler(Event::INIT, net_cli_init, 0);
 }
 

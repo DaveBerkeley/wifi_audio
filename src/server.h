@@ -4,6 +4,7 @@
 class AudioCodec;
 class Allocator;
 class AudioSource;
+class RTSP_Status;
 
 struct ServerDesc
 {
@@ -13,6 +14,7 @@ struct ServerDesc
     AudioCodec *codec;
     Allocator *allocator;
     AudioSource *audio_source;
+    RTSP_Status *cb;
 };
 
 void _server(void *);

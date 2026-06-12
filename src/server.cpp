@@ -77,7 +77,7 @@ void _server(void *arg)
     char port[18];
     snprintf(port, sizeof(port), "%d", info->rtsp_port);
     PO_DEBUG("RTSP(%s:%s)", info->ip, port);
-    rtsp_server(info->ip, port, rtp, info->codec, & sid);
+    rtsp_server(info->ip, port, rtp, info->cb, info->codec, & sid);
 
     PO_INFO("RTSP Server shut down");
 

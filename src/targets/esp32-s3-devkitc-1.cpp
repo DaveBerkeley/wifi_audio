@@ -15,9 +15,9 @@
 #include "panglos/app/devices.h"
 
 #include "board.h"
-//#include "fs.h"
 
 #include "esp32/init.h"
+#include "rtsp.h"
 
 using namespace panglos;
 
@@ -51,6 +51,14 @@ static Device _board_devs[] = {
     Device(0, 0, 0, 0, 0),
 };
 
+class Callback : public RTSP_Status
+{
+    virtual void on_state(RTSP_Session::State state) override
+    {
+        PO_DEBUG("state=%d", state);
+    }
+};
+
 void board_init()
 {
 #if defined(RGB)
@@ -63,7 +71,8 @@ void board_init()
     leds->send();
 #endif
 
-    board_init(SCK, WS, SD);
+    static Callback cb;
+    board_init(& cb, SCK, WS, SD);
 
 #if 0
     struct SpiPins pins = {

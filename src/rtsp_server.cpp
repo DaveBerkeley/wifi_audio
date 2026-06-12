@@ -454,7 +454,7 @@ class RtspClient : public Client
     }
 
 public:
-    RtspClient(SocketServer *ss, RTP_Engine *r, AudioCodec *codec, const char *ip, uint32_t sid)
+    RtspClient(SocketServer *ss, RTP_Engine *r, RTSP_Status *cb, AudioCodec *codec, const char *ip, uint32_t sid)
     :   Client(ss),
         rtp(r),
         handler(0),
@@ -469,7 +469,7 @@ public:
         ASSERT(codec);
         PO_DEBUG("codec=%s", codec->name());
         handler = new RTSP_Handler(rtp, codec, sock, ip, sid);
-        session = RTSP_Session::create(handler);
+        session = RTSP_Session::create(handler, cb);
     }
 
     ~RtspClient()
@@ -491,19 +491,21 @@ class Factory : public Client::Factory
     const char *port;
     SidGenerator *sid_gen;
     AudioCodec *codec;
+    RTSP_Status *cb;
 
     virtual Client *create_client(SocketServer *ss) override
     {
         uint32_t sid = sid_gen ? sid_gen->generate() : 12345;
-        return new RtspClient(ss, rtp, codec, ip, sid);
+        return new RtspClient(ss, rtp, cb, codec, ip, sid);
     }
 public:
-    Factory(RTP_Engine *r, AudioCodec *_codec, const char *_ip, const char *_port, SidGenerator *gen=0)
+    Factory(RTP_Engine *r, RTSP_Status *_cb, AudioCodec *_codec, const char *_ip, const char *_port, SidGenerator *gen=0)
     :   rtp(r),
         ip(strdup(_ip)),
         port(strdup(_port)),
         sid_gen(gen),
-        codec(_codec)
+        codec(_codec),
+        cb(_cb)
     {
     }
 
@@ -518,7 +520,7 @@ public:
      *
      */
 
-void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, AudioCodec *codec, SidGenerator *gen)
+void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, RTSP_Status *cb, AudioCodec *codec, SidGenerator *gen)
 {
     Socket *socket = Socket::open_tcpip(ip, port, Socket::SERVER);
     if (!socket)
@@ -526,7 +528,7 @@ void rtsp_server(const char *ip, const char *port, RTP_Engine *rtp, AudioCodec *
         PO_ERROR("unable to open socket(%s,%s)", ip, port);
         return;
     }
-    Factory factory(rtp, codec, ip, port, gen);
+    Factory factory(rtp, cb, codec, ip, port, gen);
     // blocking call to socket server
     run_socket_server(socket, & factory);
     delete socket;
