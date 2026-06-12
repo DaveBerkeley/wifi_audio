@@ -49,6 +49,7 @@ bool Callback::on_idle()
     {
         // check that audio data is being rxd
         const int rx = i2s->rx_bytes();
+
         if (rx != xfer)
         {
             xfer = rx;

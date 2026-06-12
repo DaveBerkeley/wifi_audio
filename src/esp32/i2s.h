@@ -7,7 +7,7 @@ class ESP32_I2S : public I2S
 {
     i2s_chan_handle_t handle;
     int errors;
-    int bytes;
+    int rd_bytes;
     bool running;
 
     bool error(const char *text, int err);
@@ -31,7 +31,7 @@ public:
     virtual size_t read(void *dest, size_t bytes, int idx) override;
     virtual size_t max_read_bytes() override;
     virtual int rx_errors() override { return errors; };
-    virtual int rx_bytes() override { return bytes; };
+    virtual int rx_bytes() override { return rd_bytes; };
 
     void on_rx_error();
 

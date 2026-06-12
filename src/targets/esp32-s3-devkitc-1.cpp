@@ -90,7 +90,7 @@ void board_init()
 {
     LedStrip *leds = (LedStrip *) Objects::objects->get("rgb");
     ASSERT(leds);
-    leds->set_all(0, 0, 0);
+    leds->set_all(0, 0, 0x10);
     leds->send();
 
     static Callback cb(leds);
