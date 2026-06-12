@@ -16,7 +16,6 @@
 
 #include "panglos/app/devices.h"
 #include "panglos/app/event.h"
-#include "panglos/app/cli_server.h"
 
 using namespace panglos;
 
@@ -272,7 +271,6 @@ void board_init(RTSP_Status *cb, gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
     };
 
     EventHandler::add_handler(Event::INIT, rtp_init, & config);
-    EventHandler::add_handler(Event::INIT, net_cli_init, 0);
 }
 
 //  FIN
