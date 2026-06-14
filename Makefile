@@ -6,6 +6,7 @@ PROJECT=AUDIO_TX
 #TARGET=c6_supermini
 #TARGET=esp32-s3-devkitc-1
 TARGET=esp32-s3-devkitc-2
+#TARGET=esp32-dev
 
 MODE = run
 #MODE = debug
@@ -76,7 +77,7 @@ clang: $(APP)
 #	JTAG debug
 
 openocd:
-	#~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32c3-builtin.cfg
+	#~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32-builtin.cfg
 	~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32s3-builtin.cfg
 
 gdb:

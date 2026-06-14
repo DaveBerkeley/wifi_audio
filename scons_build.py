@@ -5,7 +5,7 @@ from pathlib import Path
 
 Import("env")
 
-if env['BOARD_MCU'] == "esp32s3":
+if env['BOARD_MCU'] in [ "esp32", "esp32s3" ]:
     target = "xtensa-esp32s3"
     cross_cflags = [
         '-mlongcalls', # Xtensa fix for far calls

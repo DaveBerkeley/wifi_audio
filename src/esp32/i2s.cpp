@@ -79,8 +79,10 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
         },
     };
 
+#if !defined(ESP32_DEV)
     // byte-swap for systems that want little-endian native data
     std_cfg.slot_cfg.big_endian = config->byte_swap;
+#endif
 
     // set the bits per audio sample and the I2S bits per half frame
     std_cfg.slot_cfg.data_bit_width = (i2s_data_bit_width_t) config->bits;

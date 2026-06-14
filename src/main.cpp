@@ -49,7 +49,7 @@
 
 using namespace panglos;
 
-#define esp_error(err)    ASSERT_ERROR((err) == ESP_OK, "err=%s", lut(panglos::err_lut, (err)));
+#define esp_error(err) ASSERT_ERROR((err) == ESP_OK, "err=%s %d", lut(panglos::err_lut, (err)), (err));
 
 __attribute__((weak)) void board_init() { PO_ERROR("Not defined"); }
 
