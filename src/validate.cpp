@@ -8,6 +8,8 @@ using namespace panglos;
 
 #include "validate.h"
 
+//  Move to panglos?
+
     /*
      *
      */
@@ -17,18 +19,11 @@ void get_params(Storage &db, const struct IntParam *params)
     for (const struct IntParam *p = params; p->name; p++)
     {
         int32_t v = 0;
-        if (db.get(p->name, & v))
-        {
-            if (p->validate)
-            {
-                if (!p->validate(v, p->name))
-                {
-                    continue;
-                }
-            }
-            *p->value = v;
-            PO_DEBUG("%s.%s=%d", db.get_ns(), p->name, *p->value);
-        }
+        if (!db.get(p->name, & v)) continue;
+        if (p->validate && !p->validate(v, p->name)) continue;
+
+        *p->value = v;
+        PO_DEBUG("%s.%s=%d", db.get_ns(), p->name, *p->value);
     }
 }
 

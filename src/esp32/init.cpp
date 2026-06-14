@@ -140,13 +140,13 @@ static bool validate_chans(int32_t v, const char *name)
 static bool validate_app(int32_t v, const char *name)
 {
     const int32_t set[] = { OpusConfig::OP_AUDIO, OpusConfig::OP_VOIP };
-    return validate_set(v, name, set, 2);
+    return validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
 }
 
 static bool validate_rate(int32_t v, const char *name)
 {
-    const int32_t set[] = { 3, 5, 10, 20, 40, 60, 120 };
-    return validate_set(v, name, set, 7);
+    const int32_t set[] = { /*3,*/ 5, 10, 20, 40, 60, /*120,*/ };
+    return validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
 }
 
     /*
