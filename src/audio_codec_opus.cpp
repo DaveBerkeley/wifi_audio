@@ -17,12 +17,28 @@ static void *scratch = 0;
 
 extern "C" {
 
+    /*
+     *  The Opus stack saves a static pointer to the allocated scratch area.
+     *  So this function should only get called once. 
+     *  The scratch memory is not freed by the stack!
+     *  So if you create / destroy / create .. encoders, then the alloc
+     *  function is only called once. free() does not get called.
+     *  So we have to add an atexit() to do this.
+     */
+
+    static void free_scratch()
+    {
+        free(scratch);
+        scratch = 0;
+    }
+
     void *opus_alloc_scratch(size_t size)
     {
-        PO_DEBUG("size=%d", (int) size);
         ASSERT(!scratch);
         scratch = malloc(size);
         ASSERT(scratch);
+        PO_DEBUG("size=%d data=%p", (int) size, scratch);
+        atexit(free_scratch);
         return scratch;
     }
 };
@@ -45,7 +61,6 @@ class OpusCodec : public AudioCodec
     char *sdp_fmt;
     uint32_t samples_per_block;
     struct OpusConfig config;
-    const int channels = 2;
 
     bool make_encoder()
     {
@@ -55,7 +70,7 @@ class OpusCodec : public AudioCodec
             config.packet_rate);
 
         int err = OPUS_OK;
-        encoder = opus_encoder_create(config.fs, config.chans, _app(config.app), & err);
+        encoder = opus_encoder_create((opus_int32) config.fs, (int) config.chans, _app(config.app), & err);
         if (err != OPUS_OK)
         {
             error(err, "opus_encoder_create()");
@@ -85,12 +100,12 @@ class OpusCodec : public AudioCodec
             config.complexity,
             config.packet_rate);
 
-        int size = opus_decoder_get_size(config.chans);
+        int size = opus_decoder_get_size((int) config.chans);
 
         decoder = (OpusDecoder*)malloc(size_t(size));
         ASSERT(decoder);
 
-        int err = opus_decoder_init(decoder, config.fs, config.chans);
+        int err = opus_decoder_init(decoder, (int) config.fs, (int) config.chans);
         if (err != OPUS_OK)
         {
             error(err, "opus_encoder_create()");
@@ -232,10 +247,8 @@ public:
     {
         PO_DEBUG("");
         if(encoder) opus_encoder_destroy(encoder);
-        free(decoder);
+        if(decoder) opus_decoder_destroy(decoder);
         free(sdp_fmt);
-        free(scratch);
-        scratch = 0;
     }
 };
 

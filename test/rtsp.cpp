@@ -106,7 +106,7 @@ TEST(RTSP, Describe)
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
 
     const char* describe[] = {
         "DESCRIBE rtsp://1.2.3.4:1234/stream RTSP/1.0",
@@ -151,7 +151,7 @@ TEST(RTSP, NoSdp)
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
 
     const char* describe[] = {
         "DESCRIBE rtsp://1.2.3.4:1234/stream RTSP/1.0",
@@ -178,7 +178,7 @@ TEST(RTSP, WrongVersion)
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
 
     const char* describe[] = {
         "DESCRIBE rtsp://1.2.3.4:1234/stream RTSP/2.0",
@@ -204,7 +204,7 @@ TEST(RTSP, BadCommand)
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
 
     const char* describe[] = {
         "DESCRIB rtsp://1.2.3.4:1234/stream RTSP/1.0",
@@ -231,7 +231,7 @@ TEST(RTSP, IgnoreLeading)
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
 
     const char* describe[] = {
         "",
@@ -261,7 +261,7 @@ TEST(RTSP, Setup)
     RTP_Engine rtp(codec, 6010, 6011, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     const char* describe[] = {
@@ -297,7 +297,7 @@ TEST(RTSP, SetupComplex)
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     const char* describe[] = {
@@ -327,7 +327,7 @@ TEST(RTSP, SetupComma)
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     const char* setup[] = {
@@ -359,7 +359,7 @@ TEST(RTSP, Options)
     TestSocket socket;
     AudioCodec *codec = AudioCodec::create(& pcm_config);
     RTSP_Handler handler(0, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     const char* describe[] = {
@@ -395,7 +395,7 @@ TEST(RTSP, Play)
     RTP_Engine rtp(codec, 6000, 6001, 2);
     TestSocket socket;
     RTSP_Handler handler(& rtp, codec, & socket, ip_addr, sid);
-    RTSP_Session *session = RTSP_Session::create(& handler);
+    RTSP_Session *session = RTSP_Session::create(& handler, 0);
     EXPECT_EQ(RTSP_Session::INIT, session->get_state());
 
     const char* setup[] = {

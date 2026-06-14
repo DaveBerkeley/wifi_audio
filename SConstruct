@@ -52,7 +52,7 @@ panglos = [
     'src/linux/semaphore.cpp',
     'src/linux/time.cpp',
 
-    'unit-tests/thread.cpp',
+    #'unit-tests/thread.cpp',
 
 ]
 

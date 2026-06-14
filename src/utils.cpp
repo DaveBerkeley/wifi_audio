@@ -48,7 +48,7 @@ public:
         ASSERT(alloc);
 
         //PO_DEBUG("s=%d", (int)(num_blocks * sizeof(int8_t*)));
-        data = (int8_t**) allocator->malloc(num_blocks * sizeof(int8_t*));
+        data = (int8_t**) allocator->malloc(size_t(num_blocks) * sizeof(int8_t*));
 
         for (int i = 0; i < num_blocks; i++)
         {
@@ -97,7 +97,7 @@ public:
         return total;
     }
 
-    virtual void run()
+    virtual void run() override
     {
         while (!*dead)
         {
