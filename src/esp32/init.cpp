@@ -26,6 +26,7 @@ using namespace panglos;
 #include "audio_codec.h"
 #include "rtp.h"
 #include "rtsp.h"
+#include "validate.h"
 
 class HeapAllocator : public Allocator
 {
@@ -109,24 +110,43 @@ static bool network_running()
 }
 
     /*
-     *
+     *  Validate Opus config
      */
 
-struct Param
+static bool validate_complexity(int32_t v, const char *name)
 {
-    const char *name;
-    int32_t *value;
-};
 
-static void get_params(Storage &db, const struct Param *params)
+    return validate_range(v, name, 0, 10);
+}
+
+static bool validate_bit_rate(int32_t v, const char *name)
 {
-    for (const struct Param *p = params; p->name; p++)
-    {
-        if (db.get(p->name, p->value))
-        {
-            PO_DEBUG("%s.%s=%d", db.get_ns(), p->name, *p->value);
-        }
-    }
+
+    return validate_range(v, name, 5000, 510000);
+}
+
+static bool validate_fs(int32_t v, const char *name)
+{
+
+    return validate_range(v, name, 8000, 48000);
+}
+
+static bool validate_chans(int32_t v, const char *name)
+{
+
+    return validate_range(v, name, 1, 2);
+}
+
+static bool validate_app(int32_t v, const char *name)
+{
+    const int32_t set[] = { OpusConfig::OP_AUDIO, OpusConfig::OP_VOIP };
+    return validate_set(v, name, set, 2);
+}
+
+static bool validate_rate(int32_t v, const char *name)
+{
+    const int32_t set[] = { 3, 5, 10, 20, 40, 60, 120 };
+    return validate_set(v, name, set, 7);
 }
 
     /*
@@ -146,13 +166,13 @@ static AudioCodec *make_opus()
     int32_t chans = 2;
     int32_t app = OpusConfig::OP_AUDIO;
 
-    struct Param params[] = {
-        {   "bit_rate", & bit_rate },
-        {   "complexity", & complexity },
-        {   "packet_rate", & packet_rate },
-        {   "fs", & fs },
-        {   "chans", & chans },
-        {   "app", & app },
+    struct IntParam params[] = {
+        {   "bit_rate",    & bit_rate,    validate_bit_rate },
+        {   "complexity",  & complexity,  validate_complexity },
+        {   "packet_rate", & packet_rate, validate_rate },
+        {   "fs",          & fs,          validate_fs },
+        {   "chans",       & chans,       validate_chans },
+        {   "app",         & app,         validate_app },
         { 0, 0 },
     };
  
@@ -213,7 +233,7 @@ static I2S *make_i2s(AudioCodec *codec, gpio_num_t sck, gpio_num_t ws, gpio_num_
     int32_t slot_bits = 16;
     int32_t freq = 48000;
 
-    struct Param params[] = {
+    struct IntParam params[] = {
         {   "bits", & bits },
         {   "slot_bits", & slot_bits },
         {   "freq", & freq },
