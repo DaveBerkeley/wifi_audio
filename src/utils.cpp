@@ -80,12 +80,12 @@ public:
         // required input buffer, so do multiple reads
         // until we have a full buffer.
         size_t total = 0;
-        int idx = 0;
+        int read = 0;
         while (total < size)
         {
             size_t todo = size - total;
             size_t block = (todo > max_read) ? max_read : todo;
-            size_t rd = src->read(& buff[total], block, idx++);
+            size_t rd = src->read(& buff[total], block, read++);
             total += rd;
             if (!rd) break;
         }

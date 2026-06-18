@@ -32,7 +32,7 @@ void Callback::set_state(State state)
     RGB rgb = { 0 };
     if (to_rgb(state, & rgb))
     {
-        leds->set_all(rgb.r, rgb.g, rgb.b);
+        leds->set(0, rgb.r, rgb.g, rgb.b);
         leds->send();
     }
 }

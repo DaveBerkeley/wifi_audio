@@ -22,6 +22,7 @@ void get_params(Storage &db, const struct IntParam *params)
         if (!db.get(p->name, & v)) continue;
         if (p->validate && !p->validate(v, p->name)) continue;
 
+        ASSERT(p->value);
         *p->value = v;
         PO_DEBUG("%s.%s=%d", db.get_ns(), p->name, *p->value);
     }

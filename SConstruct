@@ -11,7 +11,6 @@ files = [
     'src/validate.cpp',
 
     'test/main.cpp',
-    'test/storage.cpp',
     'test/rtsp.cpp',
     'test/rtsp_server.cpp',
     'test/rtp.cpp',
@@ -53,6 +52,7 @@ panglos = [
     'src/linux/queue.cpp',
     'src/linux/semaphore.cpp',
     'src/linux/time.cpp',
+    'src/linux/storage.cpp',
 
     #'unit-tests/thread.cpp',
 
@@ -80,6 +80,65 @@ ccflags = [
     '-DARCH_LINUX=1',
     '-DAUDIO_TX=1',
     '-Ithird_party/opus/include',
+]
+
+static_analyser = [
+    # gcc static analyser options
+    '-Wanalyzer-allocation-size',
+    '-Wanalyzer-deref-before-check',
+    '-Wanalyzer-double-fclose',
+    '-Wanalyzer-double-free',
+    '-Wanalyzer-exposure-through-output-file',
+    '-Wanalyzer-exposure-through-uninit-copy',
+    '-Wanalyzer-fd-access-mode-mismatch',
+    '-Wanalyzer-fd-double-close',
+    '-Wanalyzer-fd-leak',
+    '-Wanalyzer-fd-phase-mismatch',
+    '-Wanalyzer-fd-type-mismatch',
+    '-Wanalyzer-fd-use-after-close',
+    '-Wanalyzer-fd-use-without-check',
+    '-Wanalyzer-file-leak',
+    '-Wanalyzer-free-of-non-heap',
+    '-Wanalyzer-imprecise-fp-arithmetic',
+    '-Wanalyzer-infinite-recursion',
+    '-Wanalyzer-jump-through-null',
+    '-Wanalyzer-malloc-leak',
+    '-Wanalyzer-mismatching-deallocation',
+    '-Wanalyzer-null-argument',
+    '-Wanalyzer-null-dereference',
+    '-Wanalyzer-out-of-bounds',
+    '-Wanalyzer-possible-null-argument',
+    '-Wanalyzer-possible-null-dereference',
+    '-Wanalyzer-putenv-of-auto-var',
+    '-Wanalyzer-shift-count-negative',
+    '-Wanalyzer-shift-count-overflow',
+    '-Wanalyzer-stale-setjmp-buffer',
+    '-Wanalyzer-tainted-allocation-size',
+    '-Wanalyzer-tainted-array-index',
+    '-Wanalyzer-tainted-assertion',
+    '-Wanalyzer-tainted-divisor',
+    '-Wanalyzer-tainted-offset',
+    '-Wanalyzer-tainted-size',
+    '-Wanalyzer-unsafe-call-within-signal-handler',
+    '-Wanalyzer-use-after-free',
+    '-Wanalyzer-use-of-pointer-in-stale-stack-frame',
+    '-Wanalyzer-use-of-uninitialized-value',
+    '-Wanalyzer-va-arg-type-mismatch',
+    '-Wanalyzer-va-list-exhausted',
+    '-Wanalyzer-va-list-leak',
+    '-Wanalyzer-va-list-use-after-va-end',
+    '-Wanalyzer-write-to-const',
+    '-Wanalyzer-write-to-string-literal',
+
+#    '-Wanalyzer-div-by-zero',
+#    '-Wanalyzer-infinite-loop',
+#    '-Wanalyzer-mkostemp-redundant-flags',
+#    '-Wanalyzer-mktemp-missing-placeholder',
+#    '-Wanalyzer-mktemp-of-string-literal',
+#    '-Wanalyzer-overlapping-buffers',
+#    '-Wanalyzer-throw-of-unexpected-type',
+#    '-Wanalyzer-undefined-behavior-ptrdiff',
+#    '-Wanalyzer-undefined-behavior-strtok',
 ]
 
 cpppath = [
@@ -134,6 +193,9 @@ if cc == 'clang':
         cflags  += [ x ]
         ccflags += [ x ]
         lflags  += [ x ]
+else:
+    pass
+    #ccflags += static_analyser
 
 tool_prefix = ''
 cross_cflags = []

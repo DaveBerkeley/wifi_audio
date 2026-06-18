@@ -1,8 +1,11 @@
 
+#include <stdlib.h>
+
 #include "hal/gpio_types.h"
 
 #include "panglos/debug.h"
 #include "panglos/device.h"
+#include "panglos/storage.h"
 
 #include "panglos/esp32/gpio.h"
 #include "panglos/app/devices.h"
@@ -15,8 +18,7 @@ using namespace panglos;
 
 #if defined(ESP32C3_SUPERMINI)
 
-// no LED on the xiao board!
-//static const GPIO_DEF led_def = { GPIO_NUM_8, ESP_GPIO::OP, true };
+static const GPIO_DEF led_def = { GPIO_NUM_8, ESP_GPIO::OP, true };
 
 //#define GPIO_TEST
 
@@ -32,7 +34,7 @@ static const GPIO_DEF sd_def = { GPIO_NUM_2, INPUT };
      */
 
 static Device _board_devs[] = {
-    //DEV_GPIO("led", 0, & led_def),
+    DEV_GPIO("led", 0, & led_def),
 #if defined(GPIO_TEST)
     DEV_GPIO("sck", 0, & sck_def),
     DEV_GPIO("ws", 0, & ws_def),
@@ -44,7 +46,13 @@ static Device _board_devs[] = {
 void board_init()
 {
 #if !defined(GPIO_TEST)
-    board_init(GPIO_NUM_4, GPIO_NUM_3, GPIO_NUM_2);
+    board_init(0, GPIO_NUM_4, GPIO_NUM_3, GPIO_NUM_2);
+#endif
+
+#if 0
+    // having this set to 'opus' will run out of memory
+    Storage db("app");
+    db.erase("codec");
 #endif
 }
 
