@@ -26,7 +26,6 @@ using namespace panglos;
 #include "audio_codec.h"
 #include "rtp.h"
 #include "rtsp.h"
-#include "validate.h"
 
 class HeapAllocator : public Allocator
 {
@@ -116,37 +115,37 @@ static bool network_running()
 static bool validate_complexity(int32_t v, const char *name)
 {
 
-    return validate_range(v, name, 0, 10);
+    return Storage::validate_range(v, name, 0, 10);
 }
 
 static bool validate_bit_rate(int32_t v, const char *name)
 {
 
-    return validate_range(v, name, 5000, 510000);
+    return Storage::validate_range(v, name, 5000, 510000);
 }
 
 static bool validate_fs(int32_t v, const char *name)
 {
 
-    return validate_range(v, name, 8000, 48000);
+    return Storage::validate_range(v, name, 8000, 48000);
 }
 
 static bool validate_chans(int32_t v, const char *name)
 {
 
-    return validate_range(v, name, 1, 2);
+    return Storage::validate_range(v, name, 1, 2);
 }
 
 static bool validate_app(int32_t v, const char *name)
 {
     const int32_t set[] = { OpusConfig::OP_AUDIO, OpusConfig::OP_VOIP };
-    return validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
+    return Storage::validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
 }
 
 static bool validate_rate(int32_t v, const char *name)
 {
     const int32_t set[] = { /*3,*/ 5, 10, 20, 40, 60, /*120,*/ };
-    return validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
+    return Storage::validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
 }
 
     /*
@@ -166,7 +165,7 @@ static AudioCodec *make_opus()
     int32_t chans = 2;
     int32_t app = OpusConfig::OP_AUDIO;
 
-    struct IntParam params[] = {
+    struct Storage::IntParam params[] = {
         {   "bit_rate",    & bit_rate,    validate_bit_rate },
         {   "complexity",  & complexity,  validate_complexity },
         {   "packet_rate", & packet_rate, validate_rate },
@@ -176,7 +175,7 @@ static AudioCodec *make_opus()
         { 0, 0 },
     };
  
-    get_params(db, params);
+    db.get_params(params);
 
     struct OpusConfig opus_config = {
         .bit_rate    = (uint32_t) bit_rate,
@@ -233,14 +232,14 @@ static I2S *make_i2s(AudioCodec *codec, gpio_num_t sck, gpio_num_t ws, gpio_num_
     int32_t slot_bits = 16;
     int32_t freq = 48000;
 
-    struct IntParam params[] = {
+    struct Storage::IntParam params[] = {
         {   "bits", & bits },
         {   "slot_bits", & slot_bits },
         {   "freq", & freq },
         { 0, 0 },
     };
  
-    get_params(db, params);
+    db.get_params(params);
 
     ESP32_I2S::Config config = {
         .sck = sck,

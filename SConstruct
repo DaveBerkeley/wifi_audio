@@ -8,14 +8,12 @@ files = [
     'src/audio_codec_opus.cpp',
     'src/server.cpp',
     'src/wav_file.cpp',
-    'src/validate.cpp',
 
     'test/main.cpp',
     'test/rtsp.cpp',
     'test/rtsp_server.cpp',
     'test/rtp.cpp',
     'test/audio_codec_opus.cpp',
-    'test/validate.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',

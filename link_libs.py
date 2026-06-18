@@ -47,6 +47,7 @@ files = [
     'date.cpp',
     'fmt.cpp',
     'json_fmt.cpp',
+    'storage.cpp',
 
     'app/cli.cpp',
     'app/cli_cmd.cpp',
