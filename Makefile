@@ -8,6 +8,8 @@ PROJECT=AUDIO_TX
 TARGET=esp32-s3-devkitc-2
 #TARGET=esp32-dev
 
+DEVICE=esp32s3
+
 MODE = run
 #MODE = debug
 
@@ -35,14 +37,12 @@ flash:
 debug:
 	PLATFORMIO_BUILD_FLAGS="-DPROJECT=${PROJECT} -D${PROJECT}" pio debug -e $(TARGET)
 
+FRAMEWORK=~/.platformio/packages/framework-espidf/components
+#FRAMEWORK=~/.platformio/packages/framework-espidf@src-33f6675d8844e266f7d075822f499274/components
+
 ctags:
-	ctags -R . \
-		/home/dave/.platformio/packages/framework-espidf/components/freertos/ \
-		/home/dave/.platformio/packages/framework-espidf/components/hal/include \
-		/home/dave/.platformio/packages/framework-espidf/components/driver \
-		/home/dave/.platformio/packages/framework-espidf/components/esp_common \
-		/home/dave/.platformio/packages/framework-espidf/components/esp_wifi \
-		/home/dave/.platformio/packages/framework-espidf/components/mqtt
+	./ctags_path.py . $(FRAMEWORK) --check esp32 --good $(DEVICE) > /tmp/ctags.txt
+	ctags --fields=+n -L /tmp/ctags.txt 
 
 clean:
 	rm -rf .pio managed_components
@@ -56,8 +56,7 @@ cleanlib:
 	scons -c third_party/build/libopus.a
 
 dump:
-	~/.platformio/packages/toolchain-xtensa-esp32s3/bin/xtensa-esp32s3-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
-	#~/.platformio/packages/toolchain-xtensa-esp32s2/bin/xtensa-esp32s2-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
+	~/.platformio/packages/toolchain-xtensa-$(DEVICE)/bin/xtensa-$(DEVICE)-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 	#~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 
 sine.wav:
