@@ -33,7 +33,7 @@ struct WavFileHeader {
 
 static FILE* error(const char *text, int err)
 {
-    PO_ERROR("%s err=%d", text, err);
+    PO_ERROR("%s err=%d '%s'", text, err, strerror(err));
     return 0;
 }
 
@@ -49,7 +49,7 @@ WavSource::WavSource(size_t _limit)
 
 WavSource::~WavSource()
 {
-    fclose(file);
+    if (file) fclose(file);
 }
 
 void WavSource::set_on_done(void (*fn)(void *), void *arg)
@@ -62,7 +62,7 @@ bool WavSource::open(const char *path)
 {
     struct stat st;
     int err = stat(path, & st);
-    if (err < 0)
+    if (err != 0)
         return error("stat()", errno);
 
     size = size_t(st.st_size);
@@ -109,7 +109,7 @@ bool WavSource::open(const char *path)
 
 bool WavSource::done()
 {
-    return feof(file);
+    return file ? feof(file) : true;
 }
 
 size_t WavSource::read(void *dest, size_t bytes, int)

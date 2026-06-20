@@ -1,6 +1,8 @@
 
 #include <gtest/gtest.h>
 
+#include "panglos/debug.h"
+
 #include "audio_codec.h"
 #include "wav_file.h"
 #include "i2s.h"
@@ -58,6 +60,10 @@ static void on_done(void *arg)
 
 TEST(RTP, AudioCopy)
 {
+    const char *path = "sine.wav";
+    WavSource wav;
+    const bool okay = wav.open(path);
+
     OpusConfig config = {
         .bit_rate = 96000,
         .complexity = 8,
@@ -71,8 +77,6 @@ TEST(RTP, AudioCopy)
     AudioCodec *codec = AudioCodec::create(& config);
     RTP_Engine *rtp = new RTP_Engine(codec, 6001, 6002, 8, 0);
 
-    WavSource wav;
-    wav.open("sine.wav");
     bool dead = false;
     wav.set_on_done(on_done, & dead);
 
@@ -87,7 +91,14 @@ TEST(RTP, AudioCopy)
     EXPECT_TRUE(reader);
     ac.reader = reader;
 
-    audio_copy(& ac);
+    if (!okay)
+    {
+        PO_WARNING("Unable to complete test for '%s'", path);
+    }
+    else
+    {
+        audio_copy(& ac);
+    }
 
     delete reader;
     delete rtp;

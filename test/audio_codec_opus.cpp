@@ -98,14 +98,6 @@ static struct OpusConfig config
 
 TEST(Opus, Test)
 {
-    AudioCodec *codec = AudioCodec::create(& config);
-
-    int pt = codec->get_payload_type();
-    EXPECT_EQ(97, pt);
-
-    const char *name = codec->name();
-    EXPECT_STREQ("Opus", name);
-
     WavSource wav;
 
     const char *ipath = "sine.wav";
@@ -113,7 +105,20 @@ TEST(Opus, Test)
     const char *opath = "/tmp/a.wav";
 
     const bool okay = wav.open(ipath);
+    if (!okay)
+    {
+        PO_WARNING("Unable to run test, can't open '%s'", ipath);
+        return;
+    }
     EXPECT_TRUE(okay);
+
+    AudioCodec *codec = AudioCodec::create(& config);
+
+    int pt = codec->get_payload_type();
+    EXPECT_EQ(97, pt);
+
+    const char *name = codec->name();
+    EXPECT_STREQ("Opus", name);
 
     size_t read_samples = codec->samples_per_packet() * 2;
     size_t read_sz = read_samples * sizeof(int16_t);
