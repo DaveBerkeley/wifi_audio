@@ -18,7 +18,7 @@
 static bool error(const char *text, esp_err_t err)
 {
     if (err == ESP_OK) return true;
-    PO_ERROR("%s %d", text, lut(panglos::err_lut, (err)));
+    PO_ERROR("%s %s", text, lut(panglos::err_lut, (err)));
     return false;
 }
 

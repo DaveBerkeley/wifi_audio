@@ -108,7 +108,7 @@ int RTSP_Handler::common(const char *label, RtspHeader *hdrs, bool sid)
     PO_DEBUG("cmd=%s code=%d '%s' seq=%d", label, code, lut(response_lut, code), hdrs->cseq);
     fmt->printf("RTSP/1.0 %d %s\r\n", code, lut(response_lut, code));
     fmt->printf("CSeq: %d\r\n", hdrs->cseq);
-    if (sid) fmt->printf("Session: %d\r\n", session_id);
+    if (sid) fmt->printf("Session: %d\r\n", (int) session_id);
     return code;
 }
 
@@ -221,7 +221,7 @@ int RTSP_Handler::setup(RtspHeader *hdrs)
     ASSERT(rtp);
     rtp->get_server_ports(& rtp_port, & rtcp_port);
     fmt->printf("Transport: RTP/AVP;unicast;server_port=%d-%d;session=%d\r\n", 
-        rtp_port, rtcp_port, session_id);
+        rtp_port, rtcp_port, (int) session_id);
     fmt->printf("\r\n");
     flush();
 

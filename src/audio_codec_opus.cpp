@@ -65,9 +65,9 @@ class OpusCodec : public AudioCodec
     bool make_encoder()
     {
         PO_DEBUG("bit_rate=%d complexity=%d packet_rate=%d ms",
-            config.bit_rate,
-            config.complexity,
-            config.packet_rate);
+            (int) config.bit_rate,
+            (int) config.complexity,
+            (int) config.packet_rate);
 
         int err = OPUS_OK;
         encoder = opus_encoder_create((opus_int32) config.fs, (int) config.chans, _app(config.app), & err);
@@ -96,9 +96,9 @@ class OpusCodec : public AudioCodec
     bool make_decoder()
     {
         PO_DEBUG("bit_rate=%d complexity=%d packet_rate=%d ms",
-            config.bit_rate,
-            config.complexity,
-            config.packet_rate);
+            (int) config.bit_rate,
+            (int) config.complexity,
+            (int) config.packet_rate);
 
         int size = opus_decoder_get_size((int) config.chans);
 

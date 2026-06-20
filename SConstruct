@@ -70,8 +70,10 @@ ccflags = [
     '-Wunused-parameter',
 
     '-Wno-missing-field-initializers',
+    '-Wformat=2', # strict level
+    '-Werror=format',
     '-Wno-format-zero-length',
-    '-Wformat-security',
+    '-Wno-format-nonliteral',
 
     '-g',
     '-DGTEST=1',
@@ -151,6 +153,8 @@ cflags = [
     '-Wall',
     '-Wextra',
     '-Werror',
+    '-Wformat=2', # strict level
+    '-Werror=format',
 ]
 
 cxxflags = [
