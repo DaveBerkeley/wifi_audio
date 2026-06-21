@@ -1,4 +1,5 @@
 
+
 #include <stdint.h>
 #include <string.h>
 
@@ -27,13 +28,21 @@
 
 using namespace panglos;
 
-#if defined(ESP32C6_SUPERMINI)
+#if defined(ESP32_LORA)
 
-#define SCK GPIO_NUM_12
-#define WS GPIO_NUM_13
-#define SD GPIO_NUM_14
+#if 0
+	-D CONFIG_CS_GPIO=18
+	-D CONFIG_RST_GPIO=14
+	-D CONFIG_MOSI_GPIO=27
+	-D CONFIG_SCK_GPIO=5
+	-D CONFIG_MISO_GPIO=19
+#endif
 
-#define RGB_GPIO GPIO_NUM_27
+#define SCK GPIO_NUM_17
+#define WS GPIO_NUM_16
+#define SD GPIO_NUM_4
+
+#define RGB_GPIO GPIO_NUM_2
 
 static const struct LedsDef leds_def = {
     .pin=RGB_GPIO, 
@@ -78,6 +87,6 @@ void board_init()
 
 Device *board_devs = _board_devs;
 
-#endif  //  ESP32_S3_DKC1
+#endif  //  ESP32_LORA
 
 //  FIN

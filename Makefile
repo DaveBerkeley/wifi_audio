@@ -5,12 +5,14 @@ PROJECT=AUDIO_TX
 #TARGET=c3_supermini
 #TARGET=c6_supermini
 #TARGET=esp32-s3-devkitc-1
-TARGET=esp32-s3-devkitc-2
+#TARGET=esp32-s3-devkitc-2
 #TARGET=esp32-dev
+TARGET=esp32-lora
 
-DEVICE=esp32s3
+#DEVICE=esp32s3
 #DEVICE=esp32c3
-#DEVICE=esp32
+#DEVICE=esp32c6
+DEVICE=esp32
 
 MODE = run
 #MODE = debug
@@ -79,7 +81,7 @@ clang: $(APP)
 
 openocd:
 	#~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32-builtin.cfg
-	~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/esp32s3-builtin.cfg
+	~/.platformio/tools/tool-openocd-esp32/bin/openocd -f board/$(DEVICE)-builtin.cfg
 
 gdb:
 	~/.platformio/tools/tool-xtensa-esp-elf-gdb/bin/xtensa-esp32-elf-gdb
