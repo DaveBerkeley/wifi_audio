@@ -202,7 +202,7 @@ else:
 tool_prefix = ''
 cross_cflags = []
 
-SConscript('third_party/SConscript', exports="tool_prefix cross_cflags")
+SConscript('third_party/SConscript.opus', exports="tool_prefix cross_cflags")
 
 env = Environment(CFLAGS=cflags, CCFLAGS=ccflags, CXXFLAGS=cxxflags, LINKFLAGS=lflags, CPPPATH=cpppath, CC=cc, CXX=cxx)
 tdd = env.Program(target='tdd', source=files, LIBS=libs, LIBPATH=libpath)

@@ -26,6 +26,6 @@ toolchain = f"toolchain-{target}"
 pio_path = f"~/.platformio/packages/{toolchain}/bin"
 tool_prefix = f"{pio_path}/{target}-elf-"
 
-env.SConscript("third_party/SConscript", exports="env tool_prefix cross_cflags")
+env.SConscript("third_party/SConscript.opus", exports="env tool_prefix cross_cflags")
 
 #   FIN
