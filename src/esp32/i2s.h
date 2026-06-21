@@ -14,16 +14,26 @@ class ESP32_I2S : public I2S
 
 public:
     ESP32_I2S();
+    virtual ~ESP32_I2S();
+
+    struct Pins
+    {
+        gpio_num_t mck;
+        gpio_num_t sck;
+        gpio_num_t ws;
+        gpio_num_t din;
+        gpio_num_t dout;
+    };
 
     struct Config
     {
-        gpio_num_t sck;
-        gpio_num_t ws;
-        gpio_num_t sd;
+        struct Pins pins;
         uint32_t freq;
         uint32_t bits;
         uint32_t slot_bits;
+        uint32_t chans;
         bool byte_swap;
+        bool primary; // true if the I2S outputs clock signals
     };
 
     bool init(const struct Config *config);

@@ -6,6 +6,8 @@
 #include "driver/i2s_std.h"
 #include "driver/gpio.h"
 
+#include "cli/src/cli.h"
+
 #include "panglos/debug.h"
 
 #include "panglos/esp32/gpio.h"
@@ -176,6 +178,7 @@ static AudioCodec *make_opus()
     };
  
     db.get_params(params);
+    db.show_params(params);
 
     struct OpusConfig opus_config = {
         .bit_rate    = (uint32_t) bit_rate,
@@ -221,6 +224,8 @@ static AudioCodec *make_codec()
      *
      */
 
+static ESP32_I2S::Config i2s_config;
+
 static I2S *make_i2s(AudioCodec *codec, gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
 {
     PO_DEBUG("");
@@ -231,28 +236,147 @@ static I2S *make_i2s(AudioCodec *codec, gpio_num_t sck, gpio_num_t ws, gpio_num_
     int32_t bits = 16;
     int32_t slot_bits = 16;
     int32_t freq = 48000;
+    int32_t chans = 2;;
+    int32_t primary = 0; // generate I2S clock outputs
 
     struct Storage::IntParam params[] = {
         {   "bits", & bits },
         {   "slot_bits", & slot_bits },
         {   "freq", & freq },
+        {   "chans", & chans },
+        {   "primary", & primary },
         { 0, 0 },
     };
  
     db.get_params(params);
+    db.show_params(params);
 
     ESP32_I2S::Config config = {
-        .sck = sck,
-        .ws = ws,
-        .sd = sd,
+        .pins = {
+            .mck = I2S_GPIO_UNUSED,
+            .sck = sck,
+            .ws = ws,
+            .din = sd,
+            .dout = I2S_GPIO_UNUSED,
+        },
         .freq = (uint32_t) freq,
         .bits = (uint32_t) bits,
         .slot_bits = (uint32_t) slot_bits,
+        .chans = (uint32_t) chans,
         .byte_swap = codec->network_order(),
+        .primary = (bool) primary,
     };
+
+    // keep a copy of the last config, for the CLI test stuff
+    i2s_config = config; 
 
     return ESP32_I2S::create(& config);
 }
+
+    /*
+     *
+     */
+
+//#define CLI_TEST
+
+#if defined(CLI_TEST)
+
+#include "panglos/thread.h"
+#include "panglos/storage.h"
+
+static void test_fn(struct CLI *cli, struct CliCommand *)
+{
+    if (Thread::get_by_name("i2s"))
+    {
+        cli_print(cli, "Error: 'i2s' thread still running%s", cli->eol);
+        return;
+    }
+
+    I2S *i2s = (I2S*) Objects::objects->get("i2s");
+
+    if (i2s)
+    {
+        cli_print(cli, "delete old i2s%s", cli->eol);
+        delete i2s;
+        Objects::objects->remove("i2s");
+        i2s = 0;
+    }
+
+    struct Arg
+    {
+        const char *name;
+        const int32_t *set;
+        size_t sz;
+        int value;
+    };
+
+    const int32_t bits[] = { 8, 16, 24, 32 };
+    //const int32_t freq[] = { 48000, 96000 };
+    const int32_t chans[] = { 1, 2 };
+
+    struct Arg args[] = {
+        {   "bits", bits, sizeof(bits)/sizeof(bits[0]), },
+        {   "slot", bits, sizeof(bits)/sizeof(bits[0]) },
+        {   "freq", }, // freq, sizeof(freq)/sizeof(freq[0]) },
+        {   "chans", chans, sizeof(chans)/sizeof(chans[0]) },
+        {   0 },
+    };
+
+    int idx = 0;
+    for (struct Arg *arg = args; arg->name; arg++)
+    {
+        const char *s = cli_get_arg(cli, idx++);
+        if (!s)
+        {
+            cli_print(cli, "error: expected '%s' value%s", arg->name, cli->eol);
+            return;
+        }
+        if (!cli_parse_int(s, & arg->value, 10))
+        {
+            cli_print(cli, "errror parsing '%s'=%s%s", arg->name, s, cli->eol);
+            return;
+        }
+
+        if (arg->set)
+        {
+            if (!Storage::validate_set(arg->value, arg->name, arg->set, arg->sz))
+            {
+                cli_print(cli, "invalid value '%s'=%d for '%s'%s", arg->name, (int) arg->value, s, cli->eol);
+                return;
+            }
+        }
+
+        cli_print(cli, "%s=%d%s", arg->name, arg->value, cli->eol);
+    }
+
+    // Get the last settings
+    ESP32_I2S::Config config = i2s_config;
+    config.bits      = int32_t(args[0].value);
+    config.slot_bits = int32_t(args[1].value);
+    config.freq      = int32_t(args[2].value);
+    config.chans     = int32_t(args[3].value);
+
+    i2s = ESP32_I2S::create(& config);
+    Objects::objects->add("i2s", i2s);
+    
+    cli_print(cli, "created new I2S device%s", cli->eol);
+}
+
+static CliCommand test_cmd = { "test", test_fn, "help!", 0, 0, 0 };
+
+static bool test_cli_init(void *arg, Event *, Event::Queue *)
+{
+    PO_DEBUG("");
+    UNUSED(arg);
+
+    CLI *cli = (CLI*) Objects::objects->get("cli");
+    ASSERT(cli);
+    cli_append(cli, & test_cmd);
+
+    return false; // INIT handlers must return false so multiple handlers can be run
+}
+
+#endif  //  CLI_TEST
 
     /*
      *
@@ -290,6 +414,9 @@ void board_init(RTSP_Status *cb, gpio_num_t sck, gpio_num_t ws, gpio_num_t sd)
     };
 
     EventHandler::add_handler(Event::INIT, rtp_init, & config);
+#if defined(CLI_TEST)
+    EventHandler::add_handler(Event::INIT, test_cli_init, & config);
+#endif
 }
 
 //  FIN

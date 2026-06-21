@@ -3,6 +3,9 @@
 #include "driver/i2s_std.h"
 #include "driver/gpio.h"
 
+//#include "soc/i2s_struct.h" // for struct of peripheral regs
+#include "hal/i2s_ll.h" // for bug fix in driver
+
 #include "panglos/debug.h"
 #include "panglos/esp32/hal.h"
 
@@ -39,11 +42,47 @@ bool ESP32_I2S::error(const char *text, int err)
      */
 
 ESP32_I2S::ESP32_I2S()
-:   errors(0),
+:   handle(0),
+    errors(0),
     rd_bytes(0),
     running(false)
 {
 }
+
+ESP32_I2S::~ESP32_I2S()
+{
+    PO_DEBUG("");
+    if (!handle) return;
+
+    esp_err_t err = i2s_channel_disable(handle);
+    if (error("i2s_channel_disable()", err))
+        return;
+
+    err = i2s_del_channel(handle);
+    if (error("i2s_channel_disable()", err))
+        return;
+}
+
+    /*
+     *
+     */
+
+static  i2s_dev_t *get_dev(int port)
+{
+    switch (port)
+    {
+        case 0 : return & I2S0;
+#if (SOC_I2S_NUM > 1)
+        case 1 : return & I2S1;
+#endif
+        default : ASSERT(0);
+    }
+    return 0;
+}
+
+    /*
+     *
+     */
 
 bool ESP32_I2S::init(const ESP32_I2S::Config *config)
 {
@@ -51,7 +90,7 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
     // General channel configuration (handles DMA and role)
     i2s_chan_config_t chan_cfg = {
         .id = I2S_NUM_AUTO,
-        .role = I2S_ROLE_SLAVE,
+        .role = config->primary ? I2S_ROLE_MASTER : I2S_ROLE_SLAVE,
         .dma_desc_num = 8,        // Number of DMA descriptors
         .dma_frame_num = 512,     // Stay under 1023
         .auto_clear = true,       // Helps prevent audio artifacts : pads data with 0
@@ -61,16 +100,19 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
     if (error("i2s_new_channel()", err))
         return false;
 
+    const i2s_data_bit_width_t bits = i2s_data_bit_width_t(config->bits);
+    const i2s_slot_mode_t chans = (config->chans == 1) ? I2S_SLOT_MODE_MONO : I2S_SLOT_MODE_STEREO;
+
     // I2S Standard Mode Configuration (handles protocol, clocks, and data format)
     i2s_std_config_t std_cfg = {
         .clk_cfg = I2S_STD_CLK_DEFAULT_CONFIG(config->freq),
-        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO),
+        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(bits, chans),
         .gpio_cfg = {
-            .mclk = I2S_GPIO_UNUSED,
-            .bclk = config->sck,
-            .ws = config->ws,
-            .dout = I2S_GPIO_UNUSED,
-            .din = config->sd,
+            .mclk = config->pins.mck,
+            .bclk = config->pins.sck,
+            .ws = config->pins.ws,
+            .dout = config->pins.dout,
+            .din = config->pins.din,
             .invert_flags = {
                 .mclk_inv = false,
                 .bclk_inv = false,
@@ -79,7 +121,7 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
         },
     };
 
-#if !defined(ESP32_DEV)
+#if defined(SOC_I2S_HW_VERSION_2)
     // byte-swap for systems that want little-endian native data
     std_cfg.slot_cfg.big_endian = config->byte_swap;
 #endif
@@ -88,11 +130,41 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
     std_cfg.slot_cfg.data_bit_width = (i2s_data_bit_width_t) config->bits;
     std_cfg.slot_cfg.slot_bit_width = (i2s_slot_bit_width_t) config->slot_bits;
 
+    // Clock configuration
+#if defined(SOC_I2S_SUPPORTS_APLL)
+    // use the APLL as the clock source if we are a primary clock source
+    std_cfg.clk_cfg.clk_src = config->primary ? I2S_CLK_SRC_APLL : I2S_CLK_SRC_DEFAULT; 
+#else
+    // other hardware uses the 160MHz PLL
+    std_cfg.clk_cfg.clk_src = config->primary ? I2S_CLK_SRC_PLL_160M : I2S_CLK_SRC_DEFAULT; 
+#endif
+
+    if (config->slot_bits == 24)
+    {
+        std_cfg.clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_384;
+    }
+    else
+    {
+        std_cfg.clk_cfg.mclk_multiple = I2S_MCLK_MULTIPLE_512;
+    }
+
     // Apply the I2S configuration to the channel
     err = i2s_channel_init_std_mode(handle, & std_cfg);
     if (error("i2s_channel_init_std_mode()", err))
         return false;
 
+    i2s_chan_info_t chan_info;
+    err = i2s_channel_get_info(handle, & chan_info);
+    if (error("i2s_channel_get_info()", err))
+        return false;
+
+    const int port = chan_info.id;
+    // fix a driver bug : the driver doesn't set the ws width for the slot correctly
+    // when bits <  slot_bits
+    i2s_dev_t *dev = get_dev(port);
+    i2s_ll_rx_set_ws_width(dev, config->slot_bits);
+
+    //  Register callback notification : track rx overflow
     i2s_event_callbacks_t cbs = {
         .on_recv = NULL,
         .on_recv_q_ovf = rx_overflow,
@@ -144,10 +216,17 @@ void ESP32_I2S::on_rx_error()
 
 ESP32_I2S *ESP32_I2S::create(const struct ESP32_I2S::Config *config)
 {
-    PO_DEBUG("sck=%d ws=%d sd=%d freq=%d bits=%d slot=%d", 
-            config->sck, config->ws, config->sd, 
+    PO_DEBUG("mclk=%d sck=%d ws=%d din=%d dout=%d", 
+            config->pins.mck, config->pins.sck, config->pins.ws, 
+            config->pins.din, config->pins.dout 
+    );
+    PO_DEBUG("freq=%d bits=%d slot=%d chans=%d primary=%d", 
             (int) config->freq,
-            config->bits, config->slot_bits);
+            (int) config->bits, 
+            (int) config->slot_bits,
+            (int) config->chans,
+            (int) config->primary
+    );
 
     ESP32_I2S *i2s = new ESP32_I2S();
     bool ok = i2s->init(config);

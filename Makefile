@@ -9,6 +9,8 @@ TARGET=esp32-s3-devkitc-2
 #TARGET=esp32-dev
 
 DEVICE=esp32s3
+#DEVICE=esp32c3
+#DEVICE=esp32
 
 MODE = run
 #MODE = debug
