@@ -1,0 +1,136 @@
+import os
+from pathlib import Path
+
+Import("tool_prefix")
+Import("cross_cflags")
+
+tools = {
+    "CC"        : f"{tool_prefix}gcc",
+    "CXX"       : f"{tool_prefix}g++",
+    "LD"        : f"{tool_prefix}gcc",
+    "AR"        : f"{tool_prefix}ar",
+    "RANLIB"    : f"{tool_prefix}ranlib",
+    "AS"        : f"{tool_prefix}as",
+    "OBJCOPY"   : f"{tool_prefix}objcopy",
+    "OBJDUMP"   : f"{tool_prefix}objdump",
+    "SIZE"      : f"{tool_prefix}size",
+    "NM"        : f"{tool_prefix}nm",
+    "STRIP"     : f"{tool_prefix}strip",
+    "READELF"   : f"{tool_prefix}readelf",
+    "GDB"       : f"{tool_prefix}gdb",
+}
+
+# Environment setup with custom options
+env = Environment(ENV=os.environ, **tools)
+
+# Allow command-line overrides
+opts = Variables()
+opts.Add(EnumVariable('debug', 'Build with debug symbols', 'no', 
+                      allowed_values=('yes', 'no')))
+opts.Add(PathVariable('PREFIX', 'Installation prefix', '/usr/local'))
+
+# Apply options to environment
+opts.Update(env)
+Help(opts.GenerateHelpText(env))
+
+# Platform detection
+is_linux = os.name == 'posix'
+is_esp32 = 'ESP32' in os.environ.get('IDF_TARGET', '')
+
+# Determine library paths
+SRC_DIR = 'codec2/'
+BUILD_DIR = 'build'
+INSTALL_DIR = env['PREFIX']
+
+# Create build directory if it doesn't exist
+if not os.path.exists(BUILD_DIR):
+    os.makedirs(BUILD_DIR)
+
+# Base compiler flags
+base_cflags = [
+    '-O2' if env['debug'] == 'no' else '-O0',
+    '-g',
+    '-Wall',
+    '-Wextra',
+    '-Wno-unused-parameter',
+    '-Wno-maybe-uninitialized',
+    '-std=c99',
+    '-DM_PI=3.14159265358979323846',
+] + cross_cflags
+
+# Add extra flags if provided
+if env.get('EXTRA_CFLAGS'):
+    base_cflags.extend(env['EXTRA_CFLAGS'].split())
+
+env.Append(CPPPATH=[
+    '.',
+    'third_party/codec2',
+    SRC_DIR,
+])
+
+# Set compiler flags
+env.Append(CCFLAGS=base_cflags)
+
+config_header = '''
+
+#pragma once
+
+#define CODEC2_VERSION_MAJOR 1
+#define CODEC2_VERSION_MINOR 1
+#define CODEC2_VERSION_PATCH 1
+#define CODEC2_VERSION "1.1.1"
+
+'''
+
+with open('codec2/version.h', 'w') as f:
+    f.write(config_header)
+
+env.Append(CPPDEFINES=['HAVE_CONFIG_H'])
+env.Append(CPPPATH=['.'])
+
+# Linker flags
+env.Append(LINKFLAGS=['-lm'])
+
+BUILT = "codec2-dev/build_linux/src/"
+
+# Source files to compile
+opus_sources = [
+    # Core files
+    SRC_DIR + 'codec2.c',
+    SRC_DIR + 'c2sim.c',
+    SRC_DIR + 'codec2_fft.c',
+    SRC_DIR + 'nlp.c',
+    SRC_DIR + 'pack.c',
+    SRC_DIR + 'kiss_fft.c',
+    SRC_DIR + 'kiss_fftr.c',
+    SRC_DIR + 'quantise.c',
+    SRC_DIR + 'lpc.c',
+    SRC_DIR + 'lsp.c',
+    SRC_DIR + 'newamp1.c',
+    SRC_DIR + 'newamp2.c',
+    SRC_DIR + 'mbest.c',
+    SRC_DIR + 'phase.c',
+    SRC_DIR + 'sine.c',
+    SRC_DIR + 'interp.c',
+    SRC_DIR + 'postfilter.c',
+
+    BUILT + 'codebook.c',
+    BUILT + 'codebookge.c',
+    BUILT + 'codebooknewamp1.c',
+    BUILT + 'codebooknewamp2.c',
+    BUILT + 'codebooknewamp1_energy.c',
+    BUILT + 'codebooknewamp2_energy.c',
+    BUILT + 'codebookjmv.c',
+    BUILT + 'codebookd.c',
+]
+
+# Build static library
+libcodec2 = env.StaticLibrary(
+    target=os.path.join(BUILD_DIR, 'libcodec2'),
+    source=opus_sources
+)
+Default(libcodec2)
+
+#Return('libcodec2')
+
+#   FIN

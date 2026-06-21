@@ -14,6 +14,7 @@ files = [
     'test/rtsp_server.cpp',
     'test/rtp.cpp',
     'test/audio_codec_opus.cpp',
+    'test/audio_codec_codec2.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',
@@ -147,6 +148,8 @@ cpppath = [
     'lib/printf/src',
     'lib/panglos/src',
     'lib/cli/src',
+    'third_party/codec2',
+    'third_party',
 ]
 
 cflags = [
@@ -177,6 +180,7 @@ libpath = [
 
 libs = [
     'libopus',
+    'libcodec2',
 ]
 
 import os
@@ -203,6 +207,7 @@ tool_prefix = ''
 cross_cflags = []
 
 SConscript('third_party/SConscript.opus', exports="tool_prefix cross_cflags")
+SConscript('third_party/SConscript.codec2', exports="tool_prefix cross_cflags")
 
 env = Environment(CFLAGS=cflags, CCFLAGS=ccflags, CXXFLAGS=cxxflags, LINKFLAGS=lflags, CPPPATH=cpppath, CC=cc, CXX=cxx)
 tdd = env.Program(target='tdd', source=files, LIBS=libs, LIBPATH=libpath)
