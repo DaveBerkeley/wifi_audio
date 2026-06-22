@@ -126,16 +126,19 @@ public:
 
     virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) override
     {
-        UNUSED(samples);
-        UNUSED(obytes);
-        ASSERT(sizeof(int16_t) == sizeof(short int));
+        ASSERT(codec);
+        ASSERT(samples == samples_per_packet());
+        ASSERT(obytes == (size_t) codec2_bytes_per_frame(codec));
+        ASSERT(sizeof(int16_t) == sizeof(short));
         codec2_encode(codec, dst, (short int*) src);
         return codec2_bytes_per_frame(codec);
     }
 
     virtual size_t decode(const uint8_t *src, size_t ibytes, int16_t *dst, size_t obytes) override
     {
-        UNUSED(ibytes);
+        ASSERT(codec);
+        ASSERT(ibytes == (size_t) codec2_bytes_per_frame(codec));
+        ASSERT(obytes == (size_t) (samples_per_packet() * sample_size()));
         codec2_decode(codec, dst, src);
         return obytes / sample_size();
     }

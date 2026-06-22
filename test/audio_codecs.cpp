@@ -30,7 +30,6 @@ public:
         {
             payload = new uint8_t[s];
             memcpy(payload, p, s);
-            //memset(payload, 0xaa, s);
         }
 
         ~Packet()
@@ -84,54 +83,57 @@ public:
      *
      */
 
-static void test_codec(AudioCodec *codec, const char *opath)
+static void test_codec(AudioCodec *codec, RawSource *source, RawSink *sink)
 {
-    WavSource wav;
-
-    const char *ipath = "sine.wav";
-    //const char *ipath = "all_night_long.wav";
-
-    const bool okay = wav.open(ipath);
-    if (!okay)
-    {
-        PO_WARNING("Unable to run test, can't open '%s'", ipath);
-        return;
-    }
-    EXPECT_TRUE(okay);
 
     const char *name = codec->name();
     PO_DEBUG("codec=%s", name);
 
     size_t read_samples = codec->samples_per_packet() * codec->num_chans();
     size_t read_sz = read_samples * codec->sample_size();
+    size_t samples = read_sz / (codec->num_chans() * codec->sample_size());
+    PO_DEBUG("read_sz=%d samples=%d", (int) read_sz, (int) samples);
     int8_t *read_buff = new int8_t[read_sz];
     size_t packet_sz = codec->max_payload_size();
     uint8_t *encode_buff = new uint8_t[packet_sz];
+    PO_DEBUG("samples=%d read_samples=%d read_bytes=%d compressed_bytes=%d",
+            (int) samples,
+            (int) read_samples, (int) read_sz, (int) packet_sz
+            );
 
     Packets packets;
-
-    PO_DEBUG("Encode from WAV file '%s'", ipath);
 
     panglos::Time::tick_t now = panglos::Time::get();
     const int period = 10000; // ms tick on Linux
     size_t total_rd = 0;
     size_t total_wr = 0;
+    size_t total_packets = 0;
 
-    while (!wav.done())
+    while (!source->done())
     {
-        size_t bytes = wav.read(read_buff, read_sz, 0);
+        size_t bytes = source->read(read_buff, read_sz, 0);
         if (!bytes)
+        {
+            PO_DEBUG("read completed");
             break;
-        size_t samples = bytes / (codec->num_chans() * codec->sample_size());
-        total_rd += bytes;
+        }
+        if (bytes < read_sz)
+        {
+            // must have complete set of samples for a packet
+            PO_DEBUG("final bytes=%d sz=%d discarded", (int) bytes, (int) read_sz);
+            break;
+        }
 
-        if (samples != codec->samples_per_packet())
-            break; // must have complete set of samples for a packet
+        total_rd += bytes;
+        // bytes must be a round number of samples        
+        ASSERT(bytes == read_sz);
+        EXPECT_EQ(bytes, samples * codec->num_chans() * codec->sample_size());
 
         size_t c = codec->encode((int16_t*)read_buff, samples, encode_buff, packet_sz);
-        //PO_DEBUG("bytes=%d c=%d", (int) bytes, (int) c);
+        EXPECT_LE(c, packet_sz);
         packets.append(encode_buff, c);
         total_wr += c;
+        total_packets += 1;
 
         if (!panglos::Time::elapsed(now, period)) continue;
         now += period;
@@ -140,14 +142,9 @@ static void test_codec(AudioCodec *codec, const char *opath)
 
     EXPECT_TRUE(total_rd);
     EXPECT_TRUE(total_wr);
-    PO_DEBUG("rd=%d wr=%d ratio=%d", (int) total_rd, (int) total_wr, int(total_rd / total_wr));
-
-    WavSink sink;
-
-    bool ok = sink.open(opath);
-    EXPECT_TRUE(ok);
-
-    PO_DEBUG("Decode to WAV file '%s'", opath);
+    PO_DEBUG("packets=%d rd=%d wr=%d ratio=%d", 
+            (int) total_packets, 
+            (int) total_rd, (int) total_wr, int(total_rd / total_wr));
 
     now = panglos::Time::get();
     while (true)
@@ -157,7 +154,7 @@ static void test_codec(AudioCodec *codec, const char *opath)
 
         size_t s = codec->decode(packet->payload, packet->size, (int16_t*) read_buff, read_sz);
         EXPECT_TRUE(s > 0);
-        bool ok = sink.write(read_buff, s * codec->num_chans() * codec->sample_size());
+        bool ok = sink->write(read_buff, s * codec->num_chans() * codec->sample_size());
         EXPECT_TRUE(ok);
         delete packet;
 
@@ -166,12 +163,47 @@ static void test_codec(AudioCodec *codec, const char *opath)
         PO_DEBUG(".");
     }
 
-    sink.close();
+    sink->close();
 
     delete[] read_buff;
     delete[] encode_buff;
+}
 
-    PO_DEBUG("Written: '%s'", opath);
+    /*
+     *
+     */
+
+static void hint(const char *path)
+{
+    if (strstr(path, ".wav"))
+    {
+        PO_DEBUG("play with : mplayer %s", path);
+        return;
+    }
+    if (strstr(path, ".raw"))
+    {
+        PO_DEBUG("play with : aplay -f S16_LE %s", path);
+        return;
+    }
+    PO_DEBUG("unknown file format %s", path);
+}
+
+static RawSource *audio_reader(const char *path)
+{
+    RawSource *src = 0;
+
+    if (strstr(path, ".wav"))
+    {
+        src = new WavSource;
+    }
+    else if (strstr(path, ".raw"))
+    {
+        src = new RawSource;
+    }
+    
+    if (!src) return 0;
+    if (!src->open(path)) return 0;
+    return src;
 }
 
     /*
@@ -193,8 +225,22 @@ TEST(Codec, Opus)
     };
 
     AudioCodec *codec = AudioCodec::create(& config);
-    test_codec(codec, "/tmp/opus.wav");
+    
+    //const char *ipath = "sine.wav";
+    const char *ipath = "audio_files/test_audio.wav";
+    const char *opath = "/tmp/opus.wav";
+
+    PO_DEBUG("Encode from file '%s'", ipath);
+    RawSource *src = audio_reader(ipath);
+
+    WavSink sink;
+    bool ok = sink.open(opath);
+    EXPECT_TRUE(ok);
+
+    test_codec(codec, src, & sink);
+    hint(opath);
     delete codec;
+    delete src;
 }
 
     /*
@@ -208,12 +254,29 @@ TEST(Codec, Codec2)
     struct Codec2Config config =
     {
         //.mode = CODEC2_MODE_3200,
-        .mode = CODEC2_MODE_1200,
-        .fs = 8000,
+        .mode = CODEC2_MODE_2400,
+        //.mode = CODEC2_MODE_1600,
+        //.mode = CODEC2_MODE_1300,
+        //.mode = CODEC2_MODE_700C,
+        .fs = 8000, // only used in the SDP header
     };
+
     AudioCodec *codec = AudioCodec::create(& config);
-    test_codec(codec, "/tmp/codec2.wav");
+
+    const char *ipath = "audio_files/build/test_audio.raw";
+    const char *opath = "/tmp/codec2.raw";
+    
+    PO_DEBUG("Encode from file '%s'", ipath);
+    RawSource *src = audio_reader(ipath);
+
+    RawSink sink;
+    bool ok = sink.open(opath);
+    EXPECT_TRUE(ok);
+
+    test_codec(codec, src, & sink);
+    hint(opath);
     delete codec;
+    delete src;
 }
 
 //  FIN

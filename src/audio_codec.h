@@ -31,8 +31,8 @@ struct OpusConfig
 
 struct Codec2Config
 {
-    uint32_t    mode;
-    uint32_t    fs;
+    uint32_t    mode; // eg. CODEC2_MODE_1300 
+    uint32_t    fs;   // only used in the SDP header
 };
 
     /*

@@ -70,9 +70,10 @@ dump:
 	#~/.platformio/packages/toolchain-riscv32-esp/bin/riscv32-esp-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S
 
 sine.wav:
+	cd audio_files ; make -f Makefile.audio
 	./make_sine.py
 
-tdd: sine.wav
+tdd: sine.wav 
 	scons
 
 test: tdd

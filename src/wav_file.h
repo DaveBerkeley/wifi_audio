@@ -3,19 +3,19 @@
 
 #include "i2s.h"
 
-class WavSource : public AudioSource
+class RawSource : public AudioSource
 {
+protected:
     size_t size;
-    //size_t limit;
     FILE* file;
     void (*on_done)(void *);
     void *on_done_arg;
 
 public:
-    WavSource(size_t _limit=0);
-    ~WavSource();
+    RawSource();
+    ~RawSource();
 
-    bool open(const char *path);
+    virtual bool open(const char *path);
     bool done();
 
     void set_on_done(void (*fn)(void *), void *arg);
@@ -25,20 +25,39 @@ public:
     virtual size_t max_read_bytes() override;
 };
 
-class WavSink
+class WavSource : public RawSource
 {
+public:
+    virtual bool open(const char *path) override;
+};
+
+    /*
+     *
+     */
+
+class RawSink
+{
+protected:
     size_t written;
     FILE* file;
 
-    bool write_header(int offset, uint32_t data);
+    virtual bool write_header(int offset, uint32_t data);
 public:
-    WavSink();
-    ~WavSink();
+    RawSink();
+    virtual ~RawSink();
 
-    bool open(const char *path);
-    bool close();
+    virtual bool open(const char *path);
+    virtual bool close();
 
     bool write(void *data, size_t bytes);
+};
+
+class WavSink : public RawSink
+{
+    virtual bool write_header(int offset, uint32_t data) override;
+public:
+    virtual bool open(const char *path) override;
+    virtual bool close() override;
 };
 
 //  FIN

@@ -2,5 +2,5 @@ set debuginfod enabled off
 b main
 tui enable
 
-set args --gtest_filter="-RtspServer.Test"
+set args --gtest_filter="Codec.Codec2"
 

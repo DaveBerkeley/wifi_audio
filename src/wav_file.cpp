@@ -37,28 +37,26 @@ static FILE* error(const char *text, int err)
     return 0;
 }
 
-WavSource::WavSource(size_t _limit)
+RawSource::RawSource()
 :   size(0),
-    //limit(_limit),
     file(0),
     on_done(0),
     on_done_arg(0)
 {
-    UNUSED(_limit);
 }
 
-WavSource::~WavSource()
+RawSource::~RawSource()
 {
     if (file) fclose(file);
 }
 
-void WavSource::set_on_done(void (*fn)(void *), void *arg)
+void RawSource::set_on_done(void (*fn)(void *), void *arg)
 {
     on_done = fn;
     on_done_arg = arg;
 }
 
-bool WavSource::open(const char *path)
+bool RawSource::open(const char *path)
 {
     struct stat st;
     int err = stat(path, & st);
@@ -70,6 +68,37 @@ bool WavSource::open(const char *path)
 
     file = fopen(path, "rb");
     if (!file) return error("fopen()", errno);
+
+    return file;
+}
+
+bool RawSource::done()
+{
+    return file ? feof(file) : true;
+}
+
+size_t RawSource::read(void *dest, size_t bytes, int)
+{
+    if (on_done && done())
+    {
+        on_done(on_done_arg);
+    }
+    return fread(dest, 1, bytes, file);
+}
+
+size_t RawSource::max_read_bytes()
+{
+    return size;
+}
+
+    /*
+     *
+     */
+
+bool WavSource::open(const char *path)
+{
+    if (!RawSource::open(path))
+        return false;
 
     struct WavFileHeader header;
     size_t n = fread(& header, sizeof(header), 1, file);
@@ -86,11 +115,6 @@ bool WavSource::open(const char *path)
 
     if (header.FormatSize != 16)
         return error("FormatSize", 0);
-//    if (header.DataSize != (size - sizeof(header)))
-//    {
-//        PO_ERROR("header.DataSize=%#x expected=%#x", (int) header.DataSize, (int) (size - sizeof(header)));
-//        return error("DataSize", 0);
-//    }
 
     // we are only interested in pcm 16/4800/2 signals
     if (header.Channels != 2)
@@ -107,43 +131,70 @@ bool WavSource::open(const char *path)
     return file;
 }
 
-bool WavSource::done()
+    /*
+     *
+     */
+
+RawSink::RawSink()
+:   written(0),
+    file(0)
 {
-    return file ? feof(file) : true;
 }
 
-size_t WavSource::read(void *dest, size_t bytes, int)
+RawSink::~RawSink()
 {
-    if (on_done && done())
+    close();
+}
+
+bool RawSink::write(void *data, size_t s)
+{
+    //PO_DEBUG("%p %d", data, (int) s);
+#if 0
+    for (size_t i = 0; i < s; i++)
     {
-        on_done(on_done_arg);
+        uint8_t *d = (uint8_t*) data;
+        if (d[i] != 0xaa)
+        {
+            PO_ERROR("s=%d i=%d d=%#x", (int) s, (int) i, d[i]);
+            ASSERT(0);
+        }
     }
-    return fread(dest, 1, bytes, file);
+#endif
+    size_t err = fwrite(data, 1, s, file);
+    if (err != s) return error("fwrite()", errno);
+    written += err;
+    return true;
 }
 
-size_t WavSource::max_read_bytes()
+bool RawSink::open(const char *path)
 {
-    return size;
+    file = fopen(path, "wb");
+    if (!file) return error("fopen", errno);
+    return true;
+}
+
+bool RawSink::close()
+{
+    if (!file) return true;
+
+    int err = fclose(file);
+    if (err < 0) return error("fclose()", errno);
+    file = 0;
+    return true;
+}
+
+bool RawSink::write_header(int , uint32_t )
+{
+    return true;
 }
 
     /*
      *
      */
 
-WavSink::WavSink()
-:   written(0),
-    file(0)
-{
-}
-
-WavSink::~WavSink()
-{
-    close();
-}
-
 bool WavSink::open(const char *path)
 {
-    file = fopen(path, "wb");
+    RawSink::open(path);
     if (!file) return error("fopen", errno);
 
     struct WavFileHeader header = { { 0 } };
@@ -198,18 +249,7 @@ bool WavSink::close()
     err = fseek(file, 0, SEEK_END);
     if (err < 0) return error("fseek(END)", errno);
 
-    err = fclose(file);
-    if (err < 0) return error("fclose()", errno);
-    file = 0;
-    return true;
-}
-
-bool WavSink::write(void *data, size_t s)
-{
-    size_t err = fwrite(data, 1, s, file);
-    if (err != s) return error("fwrite()", errno);
-    written += err;
-    return true;
+    return RawSink::close();
 }
 
 //  FIN

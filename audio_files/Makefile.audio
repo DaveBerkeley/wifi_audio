@@ -1,0 +1,35 @@
+# Source directory containing WAV files
+SRC_DIR = .
+
+# Build directory for generated files
+BUILD_DIR = $(SRC_DIR)/build
+
+# Find all WAV files in the source directory
+SOURCES = $(wildcard $(SRC_DIR)/*.wav)
+
+# Generate target paths in the build directory
+TARGETS = $(addprefix $(BUILD_DIR)/, \
+           $(notdir $(SOURCES:.wav=.mono.wav)) \
+           $(notdir $(SOURCES:.wav=.raw)))
+
+# Default target
+all: $(BUILD_DIR) $(TARGETS)
+
+# Create build directory if it doesn't exist
+$(BUILD_DIR):
+	mkdir -p $@
+
+# Generic rule: convert any WAV to mono WAV
+$(BUILD_DIR)/%.mono.wav: $(SRC_DIR)/%.wav | $(BUILD_DIR)
+	sox $< -c 1 $@
+
+# Generic rule: convert any WAV to RAW PCM
+$(BUILD_DIR)/%.raw: $(SRC_DIR)/%.wav | $(BUILD_DIR)
+	sox $< -t raw -c 1 -b 16 -r 8k -e signed-integer $@
+
+# Clean up
+clean:
+	rm -rf $(BUILD_DIR)
+
+.PHONY: all clean
+
