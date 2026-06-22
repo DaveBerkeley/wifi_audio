@@ -197,6 +197,47 @@ static AudioCodec *make_opus()
      *
      */
 
+//#define MAKE_CODEC2
+
+#if defined(MAKE_CODEC2)
+
+static bool validate_bit_mode(int32_t v, const char *name)
+{
+    const int32_t set[] = { 0, 1, 2, 3, 4, 5, 8 };
+    return Storage::validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
+}
+
+static AudioCodec *make_codec2()
+{
+    PO_DEBUG("");
+
+    Storage db("opus");
+
+    int32_t mode = 1;
+    int32_t fs = 48000; // Hz
+
+    struct Storage::IntParam params[] = {
+        {   "mode",    & mode,    validate_bit_mode },
+        //{   "fs",          & fs,          validate_fs },
+        { 0, 0 },
+    };
+ 
+    db.get_params(params);
+    db.show_params(params);
+
+    struct Codec2Config config = {
+        .mode = (uint32_t) mode,
+        .fs   = (uint32_t) fs,
+    };
+
+    return AudioCodec::create(& config);
+}
+#endif  //  MAKE_CODEC2
+
+    /*
+     *
+     */
+
 static AudioCodec *make_codec()
 {
     Storage db("app");
@@ -209,9 +250,15 @@ static AudioCodec *make_codec()
         {
             return make_opus();
         }
-        else if (strcmp("pcm", name))
+#if defined(MAKE_CODEC2)
+        if (!strcmp("codec2", name))
         {
-            PO_ERROR("Unknown codec '%s", name);
+            return make_codec2();
+        }
+#endif
+        if (strcmp("pcm", name))
+        {
+            PO_ERROR("Unknown codec '%s'", name);
             return 0;
         }
     }

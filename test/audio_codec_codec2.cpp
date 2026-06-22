@@ -1,18 +1,31 @@
 
 #include "gtest/gtest.h"
 
-#include "codec2.h"
+#include "codec2/src/codec2.h"
 
-struct Codec2Config
-{
-    uint32_t    mode;
-};
+#include "panglos/debug.h"
+
+#include "audio_codec.h"
+
+//using namespace panglos;
+
+    /*
+     *
+     */
 
 TEST(Codec2, Test)
 {
-    int mode = CODEC2_MODE_3200;
-    struct CODEC2 *codec = codec2_create(mode);
-    codec2_destroy(codec);
+    struct Codec2Config config =
+    {
+        .mode = CODEC2_MODE_3200,
+        .fs = 8000,
+    };
+    AudioCodec *codec = AudioCodec::create(& config);
+
+    size_t s = codec->samples_per_packet();
+    PO_DEBUG("%d", (int) s); 
+
+    delete codec;
 }
 
 //  FIN

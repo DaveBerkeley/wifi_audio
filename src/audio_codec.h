@@ -29,6 +29,12 @@ struct OpusConfig
     bool        decode;
 };
 
+struct Codec2Config
+{
+    uint32_t    mode;
+    uint32_t    fs;
+};
+
     /*
      *
      */
@@ -44,13 +50,14 @@ public:
     virtual bool network_order() = 0;
     virtual size_t samples_per_packet() = 0;
     virtual size_t num_chans() = 0;
-    virtual size_t data_size() = 0;
+    virtual size_t sample_size() = 0;
     virtual size_t max_payload_size() = 0;
     virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) = 0;
     virtual size_t decode(const uint8_t *src, size_t ibytes, int16_t *dst, size_t obytes) = 0;
 
     static AudioCodec *create(struct PcmConfig *);
     static AudioCodec *create(struct OpusConfig *);
+    static AudioCodec *create(struct Codec2Config *);
 };
 
 //  FIN

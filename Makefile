@@ -5,14 +5,14 @@ PROJECT=AUDIO_TX
 #TARGET=c3_supermini
 #TARGET=c6_supermini
 #TARGET=esp32-s3-devkitc-1
-#TARGET=esp32-s3-devkitc-2
+TARGET=esp32-s3-devkitc-2
 #TARGET=esp32-dev
-TARGET=esp32-lora
+#TARGET=esp32-lora
 
-#DEVICE=esp32s3
+DEVICE=esp32s3
 #DEVICE=esp32c3
 #DEVICE=esp32c6
-DEVICE=esp32
+#DEVICE=esp32
 
 MODE = run
 #MODE = debug
@@ -23,7 +23,9 @@ NAME=$(shell git config user.name)
 COPYRIGHT='" (C) ${NAME} "'
 BANNER=src/banner.cpp
 
-all:
+CODEC2=third_party/codec2/build_linux/src/codebook.c
+
+all: ${CODEC2}
 	echo "//    ${PROJECT} banner. Auto generated, do not edit" > ${BANNER}
 	echo "const char *banner = {" >> ${BANNER}
 	echo ${PROJECT} | sed 's/_/ /g' | figlet | sed 's/\\/\\\\/g' | awk '//{printf "    \"%s\\r\\n\"\n", $$0}' >> ${BANNER}
@@ -42,7 +44,11 @@ debug:
 	PLATFORMIO_BUILD_FLAGS="-DPROJECT=${PROJECT} -D${PROJECT}" pio debug -e $(TARGET)
 
 FRAMEWORK=~/.platformio/packages/framework-espidf/components
-#FRAMEWORK=~/.platformio/packages/framework-espidf@src-33f6675d8844e266f7d075822f499274/components
+FRAMEWORK=~/.platformio/packages/framework-espidf@src-33f6675d8844e266f7d075822f499274/components
+
+${CODEC2}:
+	# https://github.com/drowe67/codec2
+	cd third_party/codec2; mkdir build_linux; cd build_linux; cmake ..; make
 
 ctags:
 	./ctags_path.py . $(FRAMEWORK) --check esp32 --good $(DEVICE) > /tmp/ctags.txt
@@ -57,7 +63,7 @@ cleanx:
 	find .pio -name "*.o" | grep panglos | xargs rm
 
 cleanlib:
-	scons -c third_party/build/libopus.a
+	scons -c third_party/build/*.a
 
 dump:
 	~/.platformio/packages/toolchain-xtensa-$(DEVICE)/bin/xtensa-$(DEVICE)-elf-objdump .pio/build/$(TARGET)/firmware.elf -d -S

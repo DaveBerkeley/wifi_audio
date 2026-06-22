@@ -7,3 +7,6 @@
 [submodule "third_party/opus"]
 	path = third_party/opus
 	url = https://github.com/xiph/opus.git
+[submodule "third_party/codec2"]
+	path = third_party/codec2
+	url = https://github.com/drowe67/codec2

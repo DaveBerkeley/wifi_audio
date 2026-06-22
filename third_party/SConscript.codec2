@@ -38,7 +38,9 @@ is_linux = os.name == 'posix'
 is_esp32 = 'ESP32' in os.environ.get('IDF_TARGET', '')
 
 # Determine library paths
-SRC_DIR = 'codec2/'
+SRC_DIR = 'codec2/src/'
+BUILT = "codec2/build_linux/src/"
+
 BUILD_DIR = 'build'
 INSTALL_DIR = env['PREFIX']
 
@@ -64,14 +66,18 @@ if env.get('EXTRA_CFLAGS'):
 
 env.Append(CPPPATH=[
     '.',
-    'third_party/codec2',
+    'third_party',
     SRC_DIR,
 ])
 
 # Set compiler flags
 env.Append(CCFLAGS=base_cflags)
 
-config_header = '''
+import time
+td = time.ctime()
+
+config_header = f'''
+// Codec2 version file {td}
 
 #pragma once
 
@@ -82,7 +88,14 @@ config_header = '''
 
 '''
 
-with open('codec2/version.h', 'w') as f:
+import os
+if "third_party" in os.getcwd():
+    version_path = 'codec2/version.h'
+else:
+    version_path = 'third_party/codec2/version.h'
+
+# if run from pio the cwd is . but third_party when run from scons
+with open(version_path, 'w') as f:
     f.write(config_header)
 
 env.Append(CPPDEFINES=['HAVE_CONFIG_H'])
@@ -91,13 +104,9 @@ env.Append(CPPPATH=['.'])
 # Linker flags
 env.Append(LINKFLAGS=['-lm'])
 
-BUILT = "codec2-dev/build_linux/src/"
-
 # Source files to compile
-opus_sources = [
-    # Core files
+codec_sources = [
     SRC_DIR + 'codec2.c',
-    SRC_DIR + 'c2sim.c',
     SRC_DIR + 'codec2_fft.c',
     SRC_DIR + 'nlp.c',
     SRC_DIR + 'pack.c',
@@ -107,13 +116,13 @@ opus_sources = [
     SRC_DIR + 'lpc.c',
     SRC_DIR + 'lsp.c',
     SRC_DIR + 'newamp1.c',
-    SRC_DIR + 'newamp2.c',
     SRC_DIR + 'mbest.c',
     SRC_DIR + 'phase.c',
     SRC_DIR + 'sine.c',
     SRC_DIR + 'interp.c',
     SRC_DIR + 'postfilter.c',
 
+    # these files are generated as part of the project's own build process
     BUILT + 'codebook.c',
     BUILT + 'codebookge.c',
     BUILT + 'codebooknewamp1.c',
@@ -127,10 +136,8 @@ opus_sources = [
 # Build static library
 libcodec2 = env.StaticLibrary(
     target=os.path.join(BUILD_DIR, 'libcodec2'),
-    source=opus_sources
+    source=codec_sources
 )
 Default(libcodec2)
-
-#Return('libcodec2')
 
 #   FIN

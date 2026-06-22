@@ -6,6 +6,7 @@ files = [
     'src/utils.cpp',
     'src/audio_codec_pcm.cpp',
     'src/audio_codec_opus.cpp',
+    'src/audio_codec_codec2.cpp',
     'src/server.cpp',
     'src/wav_file.cpp',
 
@@ -148,7 +149,7 @@ cpppath = [
     'lib/printf/src',
     'lib/panglos/src',
     'lib/cli/src',
-    'third_party/codec2',
+    #'third_party/codec2/src',
     'third_party',
 ]
 

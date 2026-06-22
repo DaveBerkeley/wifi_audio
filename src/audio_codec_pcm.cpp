@@ -60,7 +60,7 @@ class PcmCodec : public AudioCodec
         return 360; // gives a packet size < max UDP size
     }
 
-    virtual size_t data_size() override
+    virtual size_t sample_size() override
     {
         return sizeof(int16_t);
     }
@@ -77,7 +77,7 @@ class PcmCodec : public AudioCodec
 
     virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) override
     {
-        const size_t size = samples * num_chans() * data_size();
+        const size_t size = samples * num_chans() * sample_size();
         ASSERT(size <= obytes);
         memcpy(dst, src, size);
         return size;

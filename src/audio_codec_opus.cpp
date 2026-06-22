@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "opus.h"
+#include "opus/include/opus.h"
 
 #include "panglos/debug.h"
 
@@ -184,7 +184,7 @@ class OpusCodec : public AudioCodec
         return config.chans;
     }
 
-    virtual size_t data_size() override
+    virtual size_t sample_size() override
     {
         return sizeof(int16_t);
     }

@@ -119,7 +119,7 @@ RTP_Engine::~RTP_Engine()
 size_t RTP_Engine::rx_bytes()
 {
     ASSERT(codec);
-    return codec->samples_per_packet() * codec->num_chans() * codec->data_size();
+    return codec->samples_per_packet() * codec->num_chans() * codec->sample_size();
 }
 
 void RTP_Engine::get_server_ports(int *a, int *b)
