@@ -4,6 +4,7 @@ files = [
     'src/rtsp_server.cpp',
     'src/rtp.cpp',
     'src/utils.cpp',
+    'src/audio_codec.cpp',
     'src/audio_codec_pcm.cpp',
     'src/audio_codec_opus.cpp',
     'src/audio_codec_codec2.cpp',
@@ -39,6 +40,7 @@ panglos = [
     'src/fmt.cpp',
     'src/date.cpp',
     'src/watchdog.cpp',
+    'src/storage.cpp',
 
     'src/drivers/spi.cpp',
     'src/drivers/7-segment.cpp',

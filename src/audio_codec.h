@@ -58,6 +58,8 @@ public:
     static AudioCodec *create(struct PcmConfig *);
     static AudioCodec *create(struct OpusConfig *);
     static AudioCodec *create(struct Codec2Config *);
+
+    static AudioCodec* make_codec();
 };
 
 //  FIN

@@ -5,6 +5,9 @@
 
 #include "panglos/debug.h"
 #include "panglos/time.h"
+#include "panglos/storage.h"
+
+using namespace panglos;
 
 #include "i2s.h"
 #include "audio_codec.h"
@@ -271,6 +274,83 @@ TEST(Codec, Codec2)
     hint(opath);
     delete codec;
     delete src;
+}
+
+    /*
+     *
+     */
+
+TEST(Codec, MakeOpus)
+{
+    {
+        Storage db("app");
+        db.set("codec", "opus");
+    }
+
+    Storage db("opus");
+
+    struct Pair {
+        const char *name;
+        int32_t value;
+    };
+
+    const struct Pair pairs[] = {
+        {   "bit_rate",    96000 },
+        {   "complexity",  8 },
+        {   "packet_rate", 20 },
+        {   "fs",          48000 },
+        {   "chans",       1 },
+        {   "app",         1 },
+        {   0   },
+    };
+
+    for (const struct Pair *pair = pairs; pair->name; pair++)
+    {
+        db.set(pair->name, pair->value);
+    }
+
+    AudioCodec *codec = AudioCodec::make_codec();
+
+    EXPECT_STREQ("Opus", codec->name());
+    EXPECT_EQ(1, codec->num_chans());
+
+    db.clear_all();
+
+    delete codec;
+}
+
+TEST(Codec, MakeCodec2)
+{
+    {
+        Storage db("app");
+        db.set("codec", "codec2");
+    }
+
+    Storage db("codec2");
+
+    struct Pair {
+        const char *name;
+        int32_t value;
+    };
+
+    const struct Pair pairs[] = {
+        {   "mode", CODEC2_MODE_1300 },
+        {   0   },
+    };
+
+    for (const struct Pair *pair = pairs; pair->name; pair++)
+    {
+        db.set(pair->name, pair->value);
+    }
+
+    AudioCodec *codec = AudioCodec::make_codec();
+
+    EXPECT_STREQ("codec2", codec->name());
+    EXPECT_EQ(1, codec->num_chans());
+
+    db.clear_all();
+
+    delete codec;
 }
 
 //  FIN
