@@ -105,7 +105,7 @@ public:
     virtual size_t samples_per_packet() override
     {
         ASSERT(codec);
-        return codec2_samples_per_frame(codec);
+        return size_t(codec2_samples_per_frame(codec));
     }
 
     virtual size_t num_chans() override
@@ -121,7 +121,7 @@ public:
     virtual size_t max_payload_size() override
     {
         ASSERT(codec);
-        return codec2_bytes_per_frame(codec);
+        return size_t(codec2_bytes_per_frame(codec));
     }
 
     virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) override
@@ -131,7 +131,7 @@ public:
         ASSERT(obytes == (size_t) codec2_bytes_per_frame(codec));
         ASSERT(sizeof(int16_t) == sizeof(short));
         codec2_encode(codec, dst, (short int*) src);
-        return codec2_bytes_per_frame(codec);
+        return size_t(codec2_bytes_per_frame(codec));
     }
 
     virtual size_t decode(const uint8_t *src, size_t ibytes, int16_t *dst, size_t obytes) override
@@ -147,7 +147,7 @@ public:
 AudioCodec *AudioCodec::create(struct Codec2Config *config)
 {
     ASSERT(config);
-    return new Codec2(config->mode, config->fs);
+    return new Codec2((int) config->mode, (int) config->fs);
 }
 
 //  FIN

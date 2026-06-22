@@ -92,14 +92,12 @@ static void test_codec(AudioCodec *codec, RawSource *source, RawSink *sink)
     size_t read_samples = codec->samples_per_packet() * codec->num_chans();
     size_t read_sz = read_samples * codec->sample_size();
     size_t samples = read_sz / (codec->num_chans() * codec->sample_size());
-    PO_DEBUG("read_sz=%d samples=%d", (int) read_sz, (int) samples);
+    //PO_DEBUG("read_sz=%d samples=%d", (int) read_sz, (int) samples);
     int8_t *read_buff = new int8_t[read_sz];
     size_t packet_sz = codec->max_payload_size();
     uint8_t *encode_buff = new uint8_t[packet_sz];
-    PO_DEBUG("samples=%d read_samples=%d read_bytes=%d compressed_bytes=%d",
-            (int) samples,
-            (int) read_samples, (int) read_sz, (int) packet_sz
-            );
+    //PO_DEBUG("samples=%d read_samples=%d read_bytes=%d compressed_bytes=%d",
+    //        (int) samples, (int) read_samples, (int) read_sz, (int) packet_sz);
 
     Packets packets;
 
@@ -107,20 +105,19 @@ static void test_codec(AudioCodec *codec, RawSource *source, RawSink *sink)
     const int period = 10000; // ms tick on Linux
     size_t total_rd = 0;
     size_t total_wr = 0;
-    size_t total_packets = 0;
 
     while (!source->done())
     {
         size_t bytes = source->read(read_buff, read_sz, 0);
         if (!bytes)
         {
-            PO_DEBUG("read completed");
+            //PO_DEBUG("read completed");
             break;
         }
         if (bytes < read_sz)
         {
             // must have complete set of samples for a packet
-            PO_DEBUG("final bytes=%d sz=%d discarded", (int) bytes, (int) read_sz);
+            //PO_DEBUG("final bytes=%d sz=%d discarded", (int) bytes, (int) read_sz);
             break;
         }
 
@@ -133,7 +130,6 @@ static void test_codec(AudioCodec *codec, RawSource *source, RawSink *sink)
         EXPECT_LE(c, packet_sz);
         packets.append(encode_buff, c);
         total_wr += c;
-        total_packets += 1;
 
         if (!panglos::Time::elapsed(now, period)) continue;
         now += period;
@@ -142,9 +138,7 @@ static void test_codec(AudioCodec *codec, RawSource *source, RawSink *sink)
 
     EXPECT_TRUE(total_rd);
     EXPECT_TRUE(total_wr);
-    PO_DEBUG("packets=%d rd=%d wr=%d ratio=%d", 
-            (int) total_packets, 
-            (int) total_rd, (int) total_wr, int(total_rd / total_wr));
+    PO_DEBUG("rd=%d wr=%d ratio=%d", (int) total_rd, (int) total_wr, int(total_rd / total_wr));
 
     now = panglos::Time::get();
     while (true)
