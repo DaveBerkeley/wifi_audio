@@ -14,8 +14,7 @@ files = [
     'test/rtsp.cpp',
     'test/rtsp_server.cpp',
     'test/rtp.cpp',
-    'test/audio_codec_opus.cpp',
-    'test/audio_codec_codec2.cpp',
+    'test/audio_codecs.cpp',
 
     'lib/cli/src/cli.cpp',
     'lib/cli/src/list.cpp',
