@@ -89,14 +89,15 @@ config_header = f'''
 '''
 
 import os
+# if run from pio the cwd is . but third_party when run from scons
 if "third_party" in os.getcwd():
     version_path = 'codec2/version.h'
 else:
     version_path = 'third_party/codec2/version.h'
 
-# if run from pio the cwd is . but third_party when run from scons
-with open(version_path, 'w') as f:
-    f.write(config_header)
+if not os.path.exists(version_path):
+    with open(version_path, 'w') as f:
+        f.write(config_header)
 
 env.Append(CPPDEFINES=['HAVE_CONFIG_H'])
 env.Append(CPPPATH=['.'])

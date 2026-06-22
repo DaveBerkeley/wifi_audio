@@ -120,7 +120,8 @@ public:
 
     virtual size_t max_payload_size() override
     {
-        return 128; // ??????????
+        ASSERT(codec);
+        return codec2_bytes_per_frame(codec);
     }
 
     virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) override
@@ -134,13 +135,9 @@ public:
 
     virtual size_t decode(const uint8_t *src, size_t ibytes, int16_t *dst, size_t obytes) override
     {
-        ASSERT(0);
-        UNUSED(src);
         UNUSED(ibytes);
-        UNUSED(dst);
-        UNUSED(obytes);
-//void codec2_decode(struct CODEC2 *codec2_state, short speech_out[], const unsigned char bytes[]);        
-        return 0;
+        codec2_decode(codec, dst, src);
+        return obytes / sample_size();
     }
 };
 

@@ -76,7 +76,7 @@ tdd: sine.wav
 	scons
 
 test: tdd
-	valgrind ./tdd --gtest_filter="-RtspServer.Test"
+	valgrind --exit-on-first-error=yes ./tdd --gtest_filter="-RtspServer.Test"
 
 clang: export CC=clang
 clang: export CXX=clang++
