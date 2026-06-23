@@ -35,7 +35,10 @@ using namespace panglos;
 #define SD GPIO_NUM_1
 
 // but I've blown up the LED device on my dev board ...
-#define RGB_GPIO GPIO_NUM_38
+//#define RGB_GPIO GPIO_NUM_38
+#define RGB_GPIO GPIO_NUM_14
+#define LED_TYPE RmtLedStrip::Type::SK68XX
+
 #endif
 
 #if defined(ESP32_S3_DKC2)
@@ -45,6 +48,11 @@ using namespace panglos;
 #define SD GPIO_NUM_1
 
 #define RGB_GPIO GPIO_NUM_48
+#define LED_TYPE RmtLedStrip::Type::WS2812B
+
+//#define RGB_GPIO GPIO_NUM_14
+//#define LED_TYPE RmtLedStrip::Type::SK68XX
+
 #endif
 
 #if defined(ESP32_DEV)
@@ -54,6 +62,8 @@ using namespace panglos;
 #define SD GPIO_NUM_14
 
 #define RGB_GPIO GPIO_NUM_27
+#define LED_TYPE RmtLedStrip::Type::WS2812B
+
 #endif
 
     /*
@@ -61,9 +71,9 @@ using namespace panglos;
      */
 
 static const struct LedsDef leds_def = {
-    .pin=RGB_GPIO, 
-    .n=1,
-    .type=RmtLedStrip::Type::WS2812B
+    .pin = RGB_GPIO, 
+    .n = 1,
+    .type = LED_TYPE
 };
 
     /*
