@@ -10,6 +10,11 @@ using namespace panglos;
 
 #include "audio_codec.h"
 
+//#define MAKE_OPUS
+//#define MAKE_CODEC2
+//#define MAKE_PCM
+
+#if defined(MAKE_OPUS)
 
     /*
      *  Validate Opus config
@@ -94,17 +99,27 @@ static AudioCodec *make_opus()
     return AudioCodec::create(& opus_config);
 }
 
+#endif  //  MAKE_OPUS
+
     /*
      *
      */
 
-#define MAKE_CODEC2
-
 #if defined(MAKE_CODEC2)
 
-static bool validate_bit_mode(int32_t v, const char *name)
+#include "codec2/src/codec2.h"
+
+static bool validate_mode(int32_t v, const char *name)
 {
-    const int32_t set[] = { 0, 1, 2, 3, 4, 5, 8 };
+    const int32_t set[] = { 
+        CODEC2_MODE_3200 ,
+        CODEC2_MODE_2400,
+        CODEC2_MODE_1600,
+        CODEC2_MODE_1400,
+        CODEC2_MODE_1300,
+        CODEC2_MODE_1200,
+        CODEC2_MODE_700C,
+    };    
     return Storage::validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
 }
 
@@ -112,14 +127,13 @@ static AudioCodec *make_codec2()
 {
     PO_DEBUG("");
 
-    Storage db("opus");
+    Storage db("codec2");
 
     int32_t mode = 1;
-    int32_t fs = 48000; // Hz
+    int32_t fs = 8000; // Must be 8kHz
 
     struct Storage::IntParam params[] = {
-        {   "mode",    & mode,    validate_bit_mode },
-        //{   "fs",          & fs,          validate_fs },
+        {   "mode", & mode, validate_mode },
         { 0, 0 },
     };
  
@@ -139,30 +153,27 @@ static AudioCodec *make_codec2()
      *
      */
 
-AudioCodec *AudioCodec::make_codec()
-{
-    Storage db("app");
+#if defined(MAKE_PCM)
 
-    char name[64];
-    size_t size = sizeof(name);
-    if (db.get("codec", name, & size))
-    {
-        if (!strcmp("opus", name))
-        {
-            return make_opus();
-        }
-#if defined(MAKE_CODEC2)
-        if (!strcmp("codec2", name))
-        {
-            return make_codec2();
-        }
-#endif
-        if (strcmp("pcm", name))
-        {
-            PO_ERROR("Unknown codec '%s'", name);
-            return 0;
-        }
-    }
+static AudioCodec *make_pcm()
+{
+    PO_DEBUG("");
+
+    Storage db("pcm");
+
+    int32_t bits = 16;
+    int32_t chans = 2;
+    int32_t freq = 48000; // Hz
+
+    struct Storage::IntParam params[] = {
+        {   "mode",    & bits,  },
+        {   "chans",   & chans, },
+        {   "freq",    & freq,  },
+        { 0, 0 },
+    };
+ 
+    db.get_params(params);
+    db.show_params(params);
 
     static struct PcmConfig pcm_config = {
         .bits = 16,
@@ -172,6 +183,46 @@ AudioCodec *AudioCodec::make_codec()
 
     PO_INFO("Creating PCM codec");
     return AudioCodec::create(& pcm_config);
+}
+
+#endif
+
+    /*
+     *
+     */
+
+AudioCodec *AudioCodec::make_codec()
+{
+    Storage db("app");
+
+    char name[64];
+    size_t size = sizeof(name);
+    if (db.get("codec", name, & size))
+    {
+
+#if defined(MAKE_OPUS)
+        if (!strcmp("opus", name))
+        {
+            return make_opus();
+        }
+#endif
+
+#if defined(MAKE_CODEC2)
+        if (!strcmp("codec2", name))
+        {
+            return make_codec2();
+        }
+#endif
+
+#if defined(MAKE_PCM)
+        if (!strcmp("pcm", name))
+        {
+            return make_pcm();
+        }
+#endif
+    }
+
+    return 0;
 }
 
 //  FIN

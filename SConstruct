@@ -83,6 +83,11 @@ ccflags = [
     '-DARCH_LINUX=1',
     '-DAUDIO_TX=1',
     '-Ithird_party/opus/include',
+
+    # emnable all the codecs
+    '-D MAKE_OPUS',
+    '-D MAKE_CODEC2',
+    '-D MAKE_PCM',
 ]
 
 static_analyser = [

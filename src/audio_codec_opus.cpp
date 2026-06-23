@@ -219,6 +219,11 @@ class OpusCodec : public AudioCodec
         return size_t(samples);
     }
 
+    virtual size_t sample_rate() override
+    {
+        return config.fs;
+    }
+
 public:
     OpusCodec(struct OpusConfig *_config)
     :   encoder(0),

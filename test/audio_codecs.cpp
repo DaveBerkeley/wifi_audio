@@ -222,6 +222,8 @@ TEST(Codec, Opus)
     };
 
     AudioCodec *codec = AudioCodec::create(& config);
+
+    EXPECT_EQ(codec->sample_rate(), 48000);
     
     //const char *ipath = "sine.wav";
     const char *ipath = "audio_files/test_audio.wav";
@@ -259,6 +261,8 @@ TEST(Codec, Codec2)
     };
 
     AudioCodec *codec = AudioCodec::create(& config);
+
+    EXPECT_EQ(codec->sample_rate(), 8000);
 
     const char *ipath = "audio_files/build/test_audio.raw";
     const char *opath = "/tmp/codec2.raw";
@@ -311,6 +315,7 @@ TEST(Codec, MakeOpus)
 
     AudioCodec *codec = AudioCodec::make_codec();
 
+    EXPECT_EQ(codec->sample_rate(), 48000);
     EXPECT_STREQ("Opus", codec->name());
     EXPECT_EQ(1, codec->num_chans());
 
@@ -345,8 +350,15 @@ TEST(Codec, MakeCodec2)
 
     AudioCodec *codec = AudioCodec::make_codec();
 
-    EXPECT_STREQ("codec2", codec->name());
-    EXPECT_EQ(1, codec->num_chans());
+    if (!codec)
+    {
+        PO_ERROR("codec2 support not enabled");
+    }
+    else
+    {
+        EXPECT_STREQ("codec2", codec->name());
+        EXPECT_EQ(1, codec->num_chans());
+    }
 
     db.clear_all();
 

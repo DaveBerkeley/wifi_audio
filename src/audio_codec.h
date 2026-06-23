@@ -50,6 +50,7 @@ public:
     virtual bool network_order() = 0;
     virtual size_t samples_per_packet() = 0;
     virtual size_t num_chans() = 0;
+    virtual size_t sample_rate() = 0;
     virtual size_t sample_size() = 0;
     virtual size_t max_payload_size() = 0;
     virtual size_t encode(const int16_t *src, size_t samples, uint8_t *dst, size_t obytes) = 0;

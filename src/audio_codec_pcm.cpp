@@ -10,8 +10,9 @@
 class PcmCodec : public AudioCodec
 {
     char *sdp_fmt;
+    uint32_t freq;
 
-    void make_sdp_fmt(uint32_t bits, uint32_t chans, uint32_t freq)
+    void make_sdp_fmt(uint32_t bits, uint32_t chans)
     {
         const char *fmt = 
             "k=clear: PCM Encoder\r\n"
@@ -89,11 +90,17 @@ class PcmCodec : public AudioCodec
         return 0;
     }
 
-public:
-    PcmCodec(uint32_t bits, uint32_t chans, uint32_t freq)
-    :   sdp_fmt(0)
+    virtual size_t sample_rate() override
     {
-        make_sdp_fmt(bits, chans, freq);
+        return freq;
+    }
+
+public:
+    PcmCodec(uint32_t bits, uint32_t chans, uint32_t _freq)
+    :   sdp_fmt(0),
+        freq(_freq)
+    {
+        make_sdp_fmt(bits, chans);
     }
 
     ~PcmCodec()

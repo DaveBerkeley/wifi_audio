@@ -33,9 +33,9 @@ class Codec2 : public AudioCodec
     struct CODEC2 *codec;
     const char *sdp;
     int mode;
-    int fs;
+    uint32_t fs;
 public:
-    Codec2(int _mode, int _fs)
+    Codec2(int _mode, uint32_t _fs)
     :   codec(0),
         sdp(0),
         mode(_mode),
@@ -141,6 +141,11 @@ public:
         ASSERT(obytes == (size_t) (samples_per_packet() * sample_size()));
         codec2_decode(codec, dst, src);
         return obytes / sample_size();
+    }
+
+    virtual size_t sample_rate() override
+    {
+        return fs;
     }
 };
 
