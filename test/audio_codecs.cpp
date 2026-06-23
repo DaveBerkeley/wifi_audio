@@ -442,6 +442,16 @@ TEST(Codec, Build)
     EXPECT_FALSE(codec);
 
     db.clear_all();
+
+    // make a specific codec
+    codec = AudioCodec::make_codec("pcm");
+    EXPECT_TRUE(codec);
+    EXPECT_STREQ("pcm", codec->name());
+    delete codec;
+
+    // try to make a bad codec
+    codec = AudioCodec::make_codec("bad");
+    EXPECT_FALSE(codec);
 }
 
 //  FIN

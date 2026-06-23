@@ -16,16 +16,20 @@ AudioCodec::Register *AudioCodec::codecs;
      *  Build codec from config in Storage
      */
 
-AudioCodec *AudioCodec::make_codec()
+AudioCodec *AudioCodec::make_codec(const char *name)
 {
-    Storage db("app");
+    char buff[64];
 
-    char name[64];
-    size_t size = sizeof(name);
-    if (!db.get("codec", name, & size))
+    if (!name)
     {
-        PO_WARNING("codec not specified");
-        return 0;
+        Storage db("app");
+        size_t size = sizeof(buff);
+        if (!db.get("codec", buff, & size))
+        {
+            PO_WARNING("codec not specified");
+            return 0;
+        }
+        name = buff;
     }
 
     for (AudioCodec::Register *r = AudioCodec::codecs; r; r = r->next)

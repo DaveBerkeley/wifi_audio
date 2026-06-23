@@ -60,7 +60,7 @@ public:
     static AudioCodec *create(struct OpusConfig *);
     static AudioCodec *create(struct Codec2Config *);
 
-    static AudioCodec* make_codec();
+    static AudioCodec* make_codec(const char *name=0);
 
     // Allow codecs to be registered
 
