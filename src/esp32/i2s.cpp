@@ -3,9 +3,6 @@
 #include "driver/i2s_std.h"
 #include "driver/gpio.h"
 
-//#include "soc/i2s_struct.h" // for struct of peripheral regs
-#include "hal/i2s_ll.h" // for bug fix in driver
-
 #include "panglos/debug.h"
 #include "panglos/esp32/hal.h"
 
@@ -67,23 +64,6 @@ ESP32_I2S::~ESP32_I2S()
      *
      */
 
-static  i2s_dev_t *get_dev(int port)
-{
-    switch (port)
-    {
-        case 0 : return & I2S0;
-#if (SOC_I2S_NUM > 1)
-        case 1 : return & I2S1;
-#endif
-        default : ASSERT(0);
-    }
-    return 0;
-}
-
-    /*
-     *
-     */
-
 bool ESP32_I2S::init(const ESP32_I2S::Config *config)
 {
     ASSERT(config);
@@ -129,6 +109,7 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
     // set the bits per audio sample and the I2S bits per half frame
     std_cfg.slot_cfg.data_bit_width = (i2s_data_bit_width_t) config->bits;
     std_cfg.slot_cfg.slot_bit_width = (i2s_slot_bit_width_t) config->slot_bits;
+    std_cfg.slot_cfg.ws_width = config->slot_bits;
 
     // Clock configuration
 #if defined(SOC_I2S_SUPPORTS_APLL)
@@ -152,17 +133,6 @@ bool ESP32_I2S::init(const ESP32_I2S::Config *config)
     err = i2s_channel_init_std_mode(handle, & std_cfg);
     if (error("i2s_channel_init_std_mode()", err))
         return false;
-
-    i2s_chan_info_t chan_info;
-    err = i2s_channel_get_info(handle, & chan_info);
-    if (error("i2s_channel_get_info()", err))
-        return false;
-
-    const int port = chan_info.id;
-    // fix a driver bug : the driver doesn't set the ws width for the slot correctly
-    // when bits <  slot_bits
-    i2s_dev_t *dev = get_dev(port);
-    i2s_ll_rx_set_ws_width(dev, config->slot_bits);
 
     //  Register callback notification : track rx overflow
     i2s_event_callbacks_t cbs = {
