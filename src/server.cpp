@@ -132,10 +132,42 @@ static void cmd_rtp(CLI *cli, CliCommand *)
     }
 }
 
+static void cmd_codec(CLI *cli, CliCommand *)
+{
+    bool found = false;
+
+    for (AudioCodec::Register *r = AudioCodec::codecs; r; r = r->next)
+    {
+        if (!found)
+        {
+            cli_print(cli, "available codecs:%s", cli->eol);
+        }
+        cli_print(cli, "%s%s", r->name, cli->eol);
+        found = true;
+    }
+
+    if (!found)
+    {
+        cli_print(cli, "no codecs found%s", cli->eol);
+    }
+
+    AudioCodec *codec = (AudioCodec*) Objects::objects->get("codec");
+    if (codec)
+    {
+        cli_print(cli, "codec '%s' installed%s", codec->name(), cli->eol);
+    }
+    else
+    {
+        cli_print(cli, "not codec installed%s", cli->eol);
+    }
+}
+
 void add_rtp_commands(CLI *cli)
 {
-    static CliCommand cmd = { "rtp", cmd_rtp, "list rtp clients", 0, 0, 0 };
-    cli_append(cli, & cmd);
+    static CliCommand rtp = { "rtp", cmd_rtp, "list rtp clients", 0, 0, 0 };
+    static CliCommand codec = { "codec", cmd_codec, "list codecs", 0, 0, 0 };
+    cli_append(cli, & rtp);
+    cli_append(cli, & codec);
 }
 
 //  FIN
