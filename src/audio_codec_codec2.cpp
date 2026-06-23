@@ -5,9 +5,14 @@
 
 //  https://github.com/drowe67/codec2
 
+#if defined(MAKE_CODEC2)
+
 #include "codec2/src/codec2.h"
 
 #include "panglos/debug.h"
+#include "panglos/storage.h"
+
+using namespace panglos;
 
 #include "audio_codec.h"
 
@@ -154,5 +159,52 @@ AudioCodec *AudioCodec::create(struct Codec2Config *config)
     ASSERT(config);
     return new Codec2((int) config->mode, (int) config->fs);
 }
+
+    /*
+     *  Build codec from config in Storage
+     */
+
+static bool validate_mode(int32_t v, const char *name)
+{
+    const int32_t set[] = { 
+        CODEC2_MODE_3200 ,
+        CODEC2_MODE_2400,
+        CODEC2_MODE_1600,
+        CODEC2_MODE_1400,
+        CODEC2_MODE_1300,
+        CODEC2_MODE_1200,
+        CODEC2_MODE_700C,
+    };    
+    return Storage::validate_set(v, name, set, sizeof(set)/sizeof(set[0]));
+}
+
+static AudioCodec *make_codec2()
+{
+    PO_DEBUG("");
+
+    Storage db("codec2");
+
+    int32_t mode = 1;
+    int32_t fs = 8000; // Must be 8kHz
+
+    struct Storage::IntParam params[] = {
+        {   "mode", & mode, validate_mode },
+        { 0, 0 },
+    };
+ 
+    db.get_params(params);
+    db.show_params(params);
+
+    struct Codec2Config config = {
+        .mode = (uint32_t) mode,
+        .fs   = (uint32_t) fs,
+    };
+
+    return AudioCodec::create(& config);
+}
+
+static AudioCodec::Register reg("codec2", make_codec2);
+
+#endif  //  MAKE_CODEC2
 
 //  FIN

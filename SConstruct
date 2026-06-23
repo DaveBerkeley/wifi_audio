@@ -85,9 +85,9 @@ ccflags = [
     '-Ithird_party/opus/include',
 
     # emnable all the codecs
-    '-D MAKE_OPUS',
-    '-D MAKE_CODEC2',
-    '-D MAKE_PCM',
+    '-DMAKE_OPUS',
+    '-DMAKE_CODEC2',
+    '-DMAKE_PCM',
 ]
 
 static_analyser = [

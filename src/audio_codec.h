@@ -61,6 +61,27 @@ public:
     static AudioCodec *create(struct Codec2Config *);
 
     static AudioCodec* make_codec();
+
+    // Allow codecs to be registered
+
+    class Register
+    {
+    public:
+        const char *name;
+        AudioCodec* (*maker)();
+        Register *next;
+
+        Register(const char *_name, AudioCodec* (*fn)())
+        :   name(_name),
+            maker(fn),
+            next(0)
+        {
+            next = codecs;
+            codecs = this;
+        }
+    };
+
+    static Register *codecs;
 };
 
 //  FIN

@@ -316,7 +316,7 @@ TEST(Codec, MakeOpus)
     AudioCodec *codec = AudioCodec::make_codec();
 
     EXPECT_EQ(codec->sample_rate(), 48000);
-    EXPECT_STREQ("Opus", codec->name());
+    EXPECT_STREQ("opus", codec->name());
     EXPECT_EQ(1, codec->num_chans());
 
     db.clear_all();
@@ -363,6 +363,85 @@ TEST(Codec, MakeCodec2)
     db.clear_all();
 
     delete codec;
+}
+
+    /*
+     *
+     */
+
+TEST(Codec, Register)
+{
+    // check that all the codecs are registered
+
+    struct Pair
+    {
+        const char *name;
+        bool found;
+    };
+
+    struct Pair pairs[] = {
+        {   "opus", },
+        {   "pcm", },
+        {   "codec2", },
+        {   0 },
+    };
+
+    for (AudioCodec::Register *reg = AudioCodec::codecs; reg; reg = reg->next)
+    {
+        for (struct Pair *pair = pairs; pair->name; pair++)
+        {
+            if (strcmp(reg->name, pair->name)) continue;
+            pair->found = true;
+            break;
+        }
+    }
+
+    for (struct Pair *pair = pairs; pair->name; pair++)
+    {
+        EXPECT_TRUE(pair->found);        
+        if (!pair->found) PO_ERROR("%s not found", pair->name);
+    }
+}
+
+    /*
+     *
+     */
+
+TEST(Codec, Build)
+{
+    // can't make it without the config
+    AudioCodec *codec = AudioCodec::make_codec();
+    EXPECT_FALSE(codec);
+
+    const char *names[] =
+    {
+        "opus",
+        "pcm",
+        "codec2",
+        0,
+    };
+
+    for (const char **name = names; *name; name++)
+    {
+        Storage db("app");
+        db.set("codec", *name);
+
+        codec = AudioCodec::make_codec();
+        EXPECT_TRUE(codec);
+        EXPECT_STREQ(*name, codec->name());
+        delete codec;
+
+        db.clear_all();
+    }
+
+    //  Invalid name
+    Storage db("app");
+    db.set("codec", "wrong");
+
+    codec = AudioCodec::make_codec();
+    EXPECT_FALSE(codec);
+
+    db.clear_all();
 }
 
 //  FIN

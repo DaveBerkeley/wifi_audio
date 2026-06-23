@@ -4,8 +4,13 @@
 #include <string.h>
 
 #include "panglos/debug.h"
+#include "panglos/storage.h"
+
+using namespace panglos;
 
 #include "audio_codec.h"
+
+#if defined(MAKE_PCM)
 
 class PcmCodec : public AudioCodec
 {
@@ -44,7 +49,7 @@ class PcmCodec : public AudioCodec
         return sdp_fmt;
     }
 
-    virtual const char *name() override { return "PCM"; }
+    virtual const char *name() override { return "pcm"; }
 
     virtual uint8_t get_payload_type() override
     {
@@ -118,5 +123,43 @@ AudioCodec *AudioCodec::create(struct PcmConfig *config)
     ASSERT(config);
     return new PcmCodec(config->bits, config->chans, config->freq);
 }
+
+    /*
+     *  Build codec from config in Storage
+     */
+
+static AudioCodec *make_pcm()
+{
+    PO_DEBUG("");
+
+    Storage db("pcm");
+
+    int32_t bits = 16;
+    int32_t chans = 2;
+    int32_t freq = 48000; // Hz
+
+    struct Storage::IntParam params[] = {
+        {   "mode",    & bits,  },
+        {   "chans",   & chans, },
+        {   "freq",    & freq,  },
+        { 0, 0 },
+    };
+ 
+    db.get_params(params);
+    db.show_params(params);
+
+    static struct PcmConfig pcm_config = {
+        .bits = 16,
+        .chans = 2,
+        .freq = 48000,
+    };
+
+    PO_INFO("Creating PCM codec");
+    return AudioCodec::create(& pcm_config);
+}
+
+static AudioCodec::Register reg("pcm", make_pcm);
+
+#endif  //  MAKE_PCM
 
 //  FIN
